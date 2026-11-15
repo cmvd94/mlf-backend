@@ -6,6 +6,8 @@ export const ADMIN_ROLE_PRIORITY: Record<role, number> = {
   [AdminRole.ZONE_HEAD]: 80,
   [AdminRole.REGIONAL_MANAGER]: 70,
   [AdminRole.DISTRICT_MANAGER]: 60,
-  [AdminRole.SUPERVISOR]: 50,
-  [AdminRole.ASSISTANT]: 40,
+  [AdminRole.GODOWN_MANAGER]: 50,
+  [AdminRole.SUPERVISOR]: 40,
+  [AdminRole.ASSISTANT]: 30,
+  [AdminRole.BILLING_USER]: 20,
 };

@@ -13,7 +13,6 @@ import { isValidRole } from "@/shared/utils/adminRoleValidation";
 import { cleanObject } from "@/shared/utils/cleanObject";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
-import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { Types } from "mongoose";
 import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
@@ -50,39 +49,20 @@ export class UpdateUserUseCase {
         );
       }
 
-      if (updateData?.role && !isValidRole(updateData.role)) {
-        throw new HttpException(
-          400,
-          ERROR_MESSAGES.ADMIN_ROLE_INVALID,
-          ERROR_CODES.ADMIN_ROLE_INVALID
-        );
-      }
+      if (updateData?.role) {
+        if (!isValidRole(updateData.role)) {
+          throw new HttpException(
+            400,
+            ERROR_MESSAGES.ADMIN_ROLE_INVALID,
+            ERROR_CODES.ADMIN_ROLE_INVALID
+          );
+        }
 
-      if (updateData.accessScope) {
-        if (
-          !checkRolePriority(
-            reqAdmin.role,
-            updateData.role || userBeforeUpdate.role
-          )
-        ) {
+        if (!checkRolePriority(reqAdmin.role, updateData.role)) {
           throw new HttpException(
             403,
             ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
             ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
-          );
-        }
-
-        if (
-          !compareLocationOfReqAdminNewUserWarehouse(
-            reqAdmin.role,
-            reqAdmin.accessScope,
-            updateData.accessScope
-          )
-        ) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH,
-            ERROR_CODES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH
           );
         }
       }

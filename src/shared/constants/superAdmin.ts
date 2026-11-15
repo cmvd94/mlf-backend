@@ -10,7 +10,6 @@ export const superAdminDetails = () => {
     email: "admin@mlf.com",
     phoneNumber: "9876543210",
     role: SuperAdmin.SUPER_ADMIN,
-    accessScope: {},
     createdBy: objectId,
     updatedBy: objectId,
   };

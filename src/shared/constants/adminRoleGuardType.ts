@@ -14,6 +14,7 @@ export const ROLE_GUARD_TILL_MID_LEVEL_ADMIN: role[] = [
   AdminRole.ZONE_HEAD,
   AdminRole.REGIONAL_MANAGER,
   AdminRole.DISTRICT_MANAGER,
+  AdminRole.GODOWN_MANAGER,
 ];
 
 export const ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR: role[] = [
@@ -24,4 +25,5 @@ export const ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR: role[] = [
 export const ROLE_GUARD_ALL: role[] = [
   ...ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR,
   AdminRole.ASSISTANT,
+  AdminRole.BILLING_USER,
 ];

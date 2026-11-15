@@ -15,15 +15,6 @@ export const UpdateAdminUserRouteSchema = z.object({
       role: z.nativeEnum(AdminRole).optional(),
       employeeId: z.string().trim().optional(),
       language: z.nativeEnum(Language).optional(),
-      accessScope: z
-        .object({
-          country: z.string().optional(),
-          zone: z.string().optional(),
-          state: z.string().optional(),
-          district: z.string().optional(),
-          branch: z.string().optional(),
-        })
-        .optional(),
     })
     .superRefine((data, ctx) => {
       if ("phoneNumber" in data) {

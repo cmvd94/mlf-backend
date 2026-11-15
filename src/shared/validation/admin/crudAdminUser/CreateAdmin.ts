@@ -15,18 +15,6 @@ export const CreateAdminUserRouteSchema = z.object({
       errorMap: () => ({ message: "Invalid role" }),
     }),
     employeeId: z.string().trim().min(1, "Employee ID is required"),
-    accessScope: z.object(
-      {
-        country: z.string().trim().optional(),
-        zone: z.string().trim().optional(),
-        state: z.string().trim().optional(),
-        district: z.string().trim().optional(),
-        branch: z.string().trim().optional(),
-      },
-      {
-        required_error: "Access scope is required",
-      }
-    ),
     language: z.nativeEnum(Language).optional(),
   }),
   query: z.object({}).optional(),

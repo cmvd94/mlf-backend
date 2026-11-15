@@ -15,7 +15,6 @@ import { SuperAdmin } from "@/shared/constants/adminRole";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 import { AdminSessionRepository } from "@/infrastructure/repositories/admin/AdminSessionRepository";
 import { DeleteAdminDTO } from "@/shared/dto/admin/crudUserDTO";
-import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { Admin } from "@/domain/entities/admin/Admin";
 
 @injectable()
@@ -120,20 +119,6 @@ export class DeleteUserUseCase {
         403,
         ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
         ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
-      );
-    }
-
-    if (
-      !compareLocationOfReqAdminNewUserWarehouse(
-        reqAdmin.role,
-        reqAdmin.accessScope,
-        userToDelete.accessScope
-      )
-    ) {
-      throw new HttpException(
-        400,
-        ERROR_MESSAGES.DELETE_USER_ACCESS_SCOPE_NOT_MATCH,
-        ERROR_CODES.DELETE_USER_ACCESS_SCOPE_NOT_MATCH
       );
     }
   }

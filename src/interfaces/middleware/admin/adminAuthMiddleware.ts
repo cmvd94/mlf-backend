@@ -83,7 +83,6 @@ export const authenticateTokenAdmin = async (
       role: decoded.role || user.role,
       deviceId: decoded.deviceId,
       name: user.name,
-      accessScope: user.accessScope,
     };
 
     next();
