@@ -1,0 +1,13 @@
+export enum AdminErrorStage {
+  AdminAuthMiddleware = "AdminAuthMiddleware",
+  AdminRoleGuard = "AdminRoleGuard",
+  CRUDAdminController = "CRUDAdminController",
+  CreateAdminUserUseCase = "CreateAdminUserUseCase",
+  UpdateAdminUserUseCase = "UpdateAdminUserUseCase",
+  GetAdminUserUseCase = "GetAdminUserUseCase",
+  GetAdminUserListUseCase = "GetAdminUserListUseCase",
+  DeleteAdminUserUseCase = "DeleteAdminUserUseCase",
+  UpdateIsActiveUserUseCase = "UpdateIsActiveUserUseCase",
+  AdminLoginController = "AdminLoginController",
+  AdminLogoutController = "AdminLogoutController",
+}

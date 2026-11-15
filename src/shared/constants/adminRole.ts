@@ -1,0 +1,14 @@
+export enum AdminRole {
+  GENERAL_MANAGER = "GENERAL_MANAGER",
+  ZONE_HEAD = "ZONE_HEAD",
+  REGIONAL_MANAGER = "REGIONAL_MANAGER",
+  DISTRICT_MANAGER = "DISTRICT_MANAGER",
+  SUPERVISOR = "SUPERVISOR",
+  ASSISTANT = "ASSISTANT",
+}
+
+export enum SuperAdmin {
+  SUPER_ADMIN = "SUPER_ADMIN",
+}
+
+export type role = AdminRole | SuperAdmin;
