@@ -12,8 +12,9 @@ export const ensureSuperAdmin = async (
       SuperAdmin.SUPER_ADMIN
     );
     if (!isAvailable) {
-      await adminRepository.createAdminUser(superAdminDetails());
-      logger.info("Super Admin is created successfully");
+      const details = await superAdminDetails();
+      await adminRepository.createAdminUser(details);
+      logger.info("Super Admin (mlf_01) created successfully");
     } else {
       logger.info("Super Admin already exists");
     }

@@ -13,7 +13,11 @@ export const UpdateAdminUserRouteSchema = z.object({
         .regex(/^\d{10}$/, "Phone number must be 10 digits")
         .optional(),
       role: z.nativeEnum(AdminRole).optional(),
-      employeeId: z.string().trim().optional(),
+      employeeId: z
+        .string()
+        .trim()
+        .regex(/^mlf_\d+$/i, "Employee ID must follow format like mlf_01")
+        .optional(),
       language: z.nativeEnum(Language).optional(),
     })
     .superRefine((data, ctx) => {

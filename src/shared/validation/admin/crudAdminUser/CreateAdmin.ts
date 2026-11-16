@@ -14,7 +14,10 @@ export const CreateAdminUserRouteSchema = z.object({
     role: z.nativeEnum(AdminRole, {
       errorMap: () => ({ message: "Invalid role" }),
     }),
-    employeeId: z.string().trim().min(1, "Employee ID is required"),
+    employeeId: z
+      .string()
+      .trim()
+      .regex(/^mlf_\d+$/i, "Employee ID must follow format like mlf_01"),
     language: z.nativeEnum(Language).optional(),
   }),
   query: z.object({}).optional(),
