@@ -12,6 +12,7 @@ import HttpException from "@/shared/exceptions/HttpException";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { withTransaction } from "@/shared/utils/withTransaction";
+import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 
 @injectable()
 export class UpdateUserIsActiveUseCase {
@@ -31,6 +32,26 @@ export class UpdateUserIsActiveUseCase {
           ERROR_MESSAGES.USER_NOT_FOUND,
           ERROR_CODES.USER_NOT_FOUND
         );
+      }
+
+      for (const targetUser of availableUsers) {
+        // Cannot toggle self
+        if (targetUser._id.toString() === reqAdmin.userId) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+            ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+          );
+        }
+
+        // Cannot toggle user of same or higher level
+        if (!checkRolePriority(reqAdmin.role, targetUser.role)) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+            ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+          );
+        }
       }
 
       await withTransaction(async (session) => {

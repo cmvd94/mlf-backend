@@ -41,7 +41,19 @@ export class UpdateUserUseCase {
         );
       }
 
-      if (!checkRolePriority(reqAdmin.role, userBeforeUpdate.role)) {
+      const isSelf = userId === reqAdmin.userId;
+
+      // Self-update cannot change own role
+      if (isSelf && updateData?.role && updateData.role !== userBeforeUpdate.role) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
+
+      // Cannot edit users of same level or higher level
+      if (!isSelf && !checkRolePriority(reqAdmin.role, userBeforeUpdate.role)) {
         throw new HttpException(
           403,
           ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
@@ -58,6 +70,7 @@ export class UpdateUserUseCase {
           );
         }
 
+        // Cannot assign a role equal to or higher than own role
         if (!checkRolePriority(reqAdmin.role, updateData.role)) {
           throw new HttpException(
             403,
