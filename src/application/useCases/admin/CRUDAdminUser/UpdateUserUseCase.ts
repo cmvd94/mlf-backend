@@ -60,7 +60,15 @@ export class UpdateUserUseCase {
           );
         }
 
-        if (isSelf || !checkRolePriority(reqAdmin.role, updateData.role)) {
+        if (isSelf && updateData.role !== userBeforeUpdate.role) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.CANNOT_CHANGE_OWN_ROLE,
+            ERROR_CODES.CANNOT_CHANGE_OWN_ROLE
+          );
+        }
+
+        if (!isSelf && !checkRolePriority(reqAdmin.role, updateData.role)) {
           throw new HttpException(
             403,
             ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,

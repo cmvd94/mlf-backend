@@ -1,6 +1,10 @@
 import i18n from "@/config/i18n";
 import { Request } from "express";
 import { Logger } from "winston";
+import {
+  ERROR_CODES,
+  ERROR_MESSAGES,
+} from "@/shared/constants/errorCodesMessages";
 
 export interface ApiErrorResponse {
   success: boolean;
@@ -53,16 +57,32 @@ export const sendError = (
   logger: Logger,
   values?: Record<string, any>
 ): ApiErrorResponse => {
-  const translatedMessage = translateMessage(req, message, values);
+  // Try translating ERRORS.<errCode> first
+  const keyPhrase = `ERRORS.${errCode}`;
+  let translated = translateMessage(req, keyPhrase, values);
+
+  // If translation was not found (i18n returns the key verbatim)
+  if (translated === keyPhrase) {
+    translated = translateMessage(req, message, values);
+    if (
+      translated === message &&
+      (ERROR_MESSAGES as Record<string, string>)[errCode]
+    ) {
+      translated = (ERROR_MESSAGES as Record<string, string>)[errCode];
+    }
+  }
+
+  const finalMessage = translated || message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
+
   const errorResponse = {
     success: false as const,
-    message: translatedMessage,
+    message: finalMessage,
     status,
-    errCode,
+    errCode: errCode || ERROR_CODES.INTERNAL_SERVER_ERROR,
   };
 
   logger.error(
-    `[ERROR] Status: ${status}, Code: ${errCode}, Message: ${translatedMessage}`
+    `[ERROR] Status: ${status}, Code: ${errorResponse.errCode}, Message: ${errorResponse.message}`
   );
   return errorResponse;
 };

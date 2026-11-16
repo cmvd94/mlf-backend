@@ -16,9 +16,11 @@ const errorMiddleware =
     next: NextFunction
   ): void => {
     const status: number = error.status || 500;
-    const message: string =
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
     const errCode: string = error.errCode || ERROR_CODES.INTERNAL_SERVER_ERROR;
+    const message: string =
+      error.message ||
+      (ERROR_MESSAGES as Record<string, string>)[errCode] ||
+      ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
     const stage: string = error.stage || ERROR_MESSAGES.UNKNOWN;
     const customLogger: Logger = error.logger || logger;
 
@@ -28,7 +30,16 @@ const errorMiddleware =
 
     res
       .status(status)
-      .json(sendError(req, `ERRORS.${errCode}`, status, errCode, customLogger));
+      .json(
+        sendError(
+          req,
+          message,
+          status,
+          errCode,
+          customLogger,
+          error.dynamicValues
+        )
+      );
   };
 
 export default errorMiddleware;

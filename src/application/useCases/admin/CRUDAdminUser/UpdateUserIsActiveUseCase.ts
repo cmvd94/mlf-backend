@@ -38,8 +38,8 @@ export class UpdateUserIsActiveUseCase {
         if (targetUser._id.toString() === reqAdmin.userId) {
           throw new HttpException(
             403,
-            ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
-            ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+            ERROR_MESSAGES.ADMIN_CANNOT_UPDATE_SELF,
+            ERROR_CODES.ADMIN_CANNOT_UPDATE_SELF
           );
         }
 

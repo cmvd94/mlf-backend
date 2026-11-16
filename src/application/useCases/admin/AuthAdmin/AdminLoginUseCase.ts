@@ -31,8 +31,8 @@ export class AdminLoginUseCase {
       if (!user) {
         throw new HttpException(
           400,
-          "Invalid phone number or password",
-          ERROR_CODES.INVALID_INPUT
+          ERROR_MESSAGES.INVALID_CREDENTIALS,
+          ERROR_CODES.INVALID_CREDENTIALS
         );
       }
 
@@ -47,8 +47,8 @@ export class AdminLoginUseCase {
       if (!user.password) {
         throw new HttpException(
           400,
-          "Account password is not set. Please contact administrator.",
-          ERROR_CODES.INVALID_INPUT
+          ERROR_MESSAGES.PASSWORD_REQUIRED,
+          ERROR_CODES.PASSWORD_REQUIRED
         );
       }
 
@@ -56,8 +56,8 @@ export class AdminLoginUseCase {
       if (!isPasswordValid) {
         throw new HttpException(
           400,
-          "Invalid phone number or password",
-          ERROR_CODES.INVALID_INPUT
+          ERROR_MESSAGES.INVALID_CREDENTIALS,
+          ERROR_CODES.INVALID_CREDENTIALS
         );
       }
 

@@ -1,3 +1,6 @@
+import { container } from "tsyringe";
+import { CounterRepository } from "@/infrastructure/repositories/common/CounterRepository";
+
 export const initCommonDI = () => {
-  // Register common shared services if needed
+  container.registerSingleton(CounterRepository, CounterRepository);
 };

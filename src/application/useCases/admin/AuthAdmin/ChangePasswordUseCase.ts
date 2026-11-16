@@ -46,8 +46,8 @@ export class ChangePasswordUseCase {
       if (!user.password) {
         throw new HttpException(
           400,
-          "Current password is not set on this account",
-          ERROR_CODES.INVALID_INPUT
+          ERROR_MESSAGES.PASSWORD_REQUIRED,
+          ERROR_CODES.PASSWORD_REQUIRED
         );
       }
 
@@ -59,8 +59,8 @@ export class ChangePasswordUseCase {
       if (!isCurrentPasswordValid) {
         throw new HttpException(
           400,
-          "Incorrect current password",
-          ERROR_CODES.INVALID_INPUT
+          ERROR_MESSAGES.INCORRECT_CURRENT_PASSWORD,
+          ERROR_CODES.INCORRECT_CURRENT_PASSWORD
         );
       }
 

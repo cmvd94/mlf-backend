@@ -17,7 +17,8 @@ export const CreateAdminUserRouteSchema = z.object({
     employeeId: z
       .string()
       .trim()
-      .regex(/^mlf_\d+$/i, "Employee ID must follow format like mlf_01"),
+      .regex(/^mlf_\d+$/i, "Employee ID must follow format like mlf_01")
+      .optional(),
     language: z.nativeEnum(Language).optional(),
   }),
   query: z.object({}).optional(),

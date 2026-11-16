@@ -1,4 +1,5 @@
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
+import { CounterRepository } from "@/infrastructure/repositories/common/CounterRepository";
 import {
   ERROR_CODES,
   ERROR_MESSAGES,
@@ -19,6 +20,7 @@ import bcrypt from "bcryptjs";
 export class CreateUserUseCase {
   constructor(
     @inject(AdminRepository) private adminRepository: AdminRepository,
+    @inject(CounterRepository) private counterRepository: CounterRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -47,17 +49,31 @@ export class CreateUserUseCase {
         hashedPassword = await bcrypt.hash(payload.password, 10);
       }
 
+      // Auto-generate sequential employee ID if not explicitly provided
+      let employeeId = payload.employeeId?.trim();
+      if (!employeeId) {
+        const nextSeq = await this.counterRepository.getNextSequence(
+          "ADMIN_EMPLOYEE_ID",
+          this.logger
+        );
+        employeeId = `mlf_${nextSeq.toString().padStart(2, "0")}`;
+      }
+
       const newUser = await this.adminRepository.createAdminUser({
         ...payload,
+        employeeId,
         password: hashedPassword,
         createdBy: creator,
         updatedBy: creator,
       });
 
       this.logger.info(
-        `Admin User created successfully: id:${newUser?._id} role: ${newUser?.role}, createdBy: ${reqAdmin.userId}`
+        `Admin User created successfully: id:${newUser?._id} employeeId: ${employeeId} role: ${newUser?.role}, createdBy: ${reqAdmin.userId}`
       );
-      return {};
+      return {
+        id: newUser?._id,
+        employeeId,
+      };
     } catch (error) {
       ErrorHandler.handleError(
         error,

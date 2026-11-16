@@ -5,6 +5,7 @@ import { Environment } from "@/shared/constants/environment";
 import { Logger } from "winston";
 import { AdminModel } from "@/domain/entities/admin/Admin";
 import { AdminSessionModel } from "@/domain/entities/admin/AdminSession";
+import { CounterModel } from "@/domain/entities/common/Counter";
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ export const connectDB = async (logger: Logger) => {
     if (!isProductionEnv) {
       logger.info("Syncing indexes...");
 
-      const modelsToSync = [AdminModel, AdminSessionModel];
+      const modelsToSync = [AdminModel, AdminSessionModel, CounterModel];
 
       for (const model of modelsToSync) {
         try {
