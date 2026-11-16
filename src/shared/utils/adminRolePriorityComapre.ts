@@ -1,4 +1,4 @@
-import { role, SuperAdmin } from "@/shared/constants/adminRole";
+import { role } from "@/shared/constants/adminRole";
 import { ADMIN_ROLE_PRIORITY } from "../constants/adminRolePriority";
 
 export function checkRolePriority(
@@ -15,11 +15,7 @@ export function checkRolePriority(
     return false;
   }
 
-  // Super Admin has full management privileges over all roles
-  if (currentUserRole === SuperAdmin.SUPER_ADMIN) {
-    return true;
-  }
-
-  // Role can only manage strictly lower roles (same level and higher level are forbidden)
+  // A role can ONLY manage/edit roles strictly below its own hierarchy level.
+  // Roles of equal or higher level cannot be created, updated, or deleted.
   return currentUserPriorityValue > targetUserPriorityValue;
 }

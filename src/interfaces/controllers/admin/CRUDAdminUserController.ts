@@ -141,7 +141,8 @@ export class CRUDAdminUserController {
     try {
       const result = await this.getUserListUseCase.execute(
         reqAdmin.userId,
-        query
+        query,
+        reqAdmin
       );
       res
         .status(200)
@@ -173,7 +174,7 @@ export class CRUDAdminUserController {
   ) {
     try {
       const userId = params.userId;
-      const result = await this.getAUserUseCase.execute(userId);
+      const result = await this.getAUserUseCase.execute(userId, reqAdmin);
       res
         .status(200)
         .json(sendResponse(req, "CRUDADMIN.USER_FETCHED", this.logger, result));

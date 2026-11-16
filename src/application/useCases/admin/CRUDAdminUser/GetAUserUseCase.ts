@@ -1,6 +1,9 @@
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { ERROR_MESSAGES, ERROR_CODES } from "@/shared/constants/errorCodesMessages";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
+import { SuperAdmin } from "@/shared/constants/adminRole";
+import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
+import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { inject, injectable } from "tsyringe";
@@ -13,7 +16,7 @@ export class GetAUserUseCase {
     @inject("AdminLogger") private logger: Logger
   ) {}
 
-  execute = async (userId: string) => {
+  execute = async (userId: string, reqAdmin?: ReqAdminDTO) => {
     try {
       const user = await this.adminRepository.findUserById(userId);
 
@@ -25,8 +28,21 @@ export class GetAUserUseCase {
         );
       }
 
+      const isSelf = user._id?.toString() === reqAdmin?.userId;
+      const isSubordinate = reqAdmin
+        ? checkRolePriority(reqAdmin.role, user.role)
+        : false;
+
+      const enrichedUser = {
+        ...user,
+        canEdit: isSelf || isSubordinate,
+        canDelete:
+          !isSelf && user.role !== SuperAdmin.SUPER_ADMIN && isSubordinate,
+        canToggleStatus: !isSelf && isSubordinate,
+      };
+
       this.logger.info(`Admin User fetched successfully: ${userId}`);
-      return { user };
+      return { user: enrichedUser };
     } catch (error) {
       ErrorHandler.handleError(
         error,

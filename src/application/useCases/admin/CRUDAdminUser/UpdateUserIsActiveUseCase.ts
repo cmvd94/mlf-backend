@@ -35,7 +35,6 @@ export class UpdateUserIsActiveUseCase {
       }
 
       for (const targetUser of availableUsers) {
-        // Cannot toggle self
         if (targetUser._id.toString() === reqAdmin.userId) {
           throw new HttpException(
             403,
@@ -44,7 +43,6 @@ export class UpdateUserIsActiveUseCase {
           );
         }
 
-        // Cannot toggle user of same or higher level
         if (!checkRolePriority(reqAdmin.role, targetUser.role)) {
           throw new HttpException(
             403,
