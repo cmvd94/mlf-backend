@@ -155,6 +155,33 @@ export class AdminRepository {
     }
   };
 
+  updatePassword = async (
+    userId: string,
+    password: string,
+    updatedBy: Types.ObjectId
+  ) => {
+    try {
+      const updatedUser = await AdminModel.findOneAndUpdate(
+        { _id: generateObjectId(userId), isDeleted: false },
+        { $set: { password, updatedBy } },
+        { new: true }
+      ).exec();
+      if (!updatedUser) {
+        throw new HttpException(
+          404,
+          ERROR_MESSAGES.USER_NOT_FOUND,
+          ERROR_CODES.USER_NOT_FOUND
+        );
+      }
+      return updatedUser;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new Error(
+        `[ADMIN REPOSITORY]: Failed to update password. Error: ${error}`
+      );
+    }
+  };
+
   getUserList = async (query: any, page: number, limit: number) => {
     try {
       const skip = (page - 1) * limit;
