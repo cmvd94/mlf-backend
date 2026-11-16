@@ -9,6 +9,7 @@ import HttpException from "@/shared/exceptions/HttpException";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
 import { generateToken } from "@/shared/utils/jwtUtil";
+import { SessionDetails } from "@/shared/constants/SessionDetails";
 import bcrypt from "bcryptjs";
 import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
@@ -61,7 +62,7 @@ export class AdminLoginUseCase {
       }
 
       const deviceId = generateObjectId().toString();
-      const { token } = generateToken(
+      const { token, expiresAt } = generateToken(
         {
           userId: user._id.toString(),
           role: user.role,
@@ -71,6 +72,13 @@ export class AdminLoginUseCase {
         this.logger
       );
 
+      const sessionDetail: SessionDetails = {
+        jwtToken: token,
+        deviceId,
+        deviceType: "WEB",
+        expiresAt: expiresAt,
+      };
+
       const existingSession =
         await this.adminSessionRepository.findSessionByUserId(
           user._id.toString()
@@ -79,12 +87,12 @@ export class AdminLoginUseCase {
       if (existingSession) {
         await this.adminSessionRepository.pushSessionDetails(
           user._id.toString(),
-          { deviceId, jwtToken: token }
+          sessionDetail
         );
       } else {
         await this.adminSessionRepository.createAdminSession({
-          userId: user._id.toString(),
-          validSessions: [{ deviceId, jwtToken: token }],
+          userId: user._id,
+          validSessions: [sessionDetail],
         });
       }
 
