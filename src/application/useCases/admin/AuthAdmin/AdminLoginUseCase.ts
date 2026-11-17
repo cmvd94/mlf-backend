@@ -107,6 +107,7 @@ export class AdminLoginUseCase {
           phoneNumber: user.phoneNumber,
           role: user.role,
           employeeId: user.employeeId,
+          accessScope: user.accessScope,
         },
       };
     } catch (error) {

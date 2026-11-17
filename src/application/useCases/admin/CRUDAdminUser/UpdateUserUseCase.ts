@@ -10,6 +10,8 @@ import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import HttpException from "@/shared/exceptions/HttpException";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 import { isValidRole } from "@/shared/utils/adminRoleValidation";
+import { validateAccessScope } from "@/shared/utils/accessScopeValidation";
+import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { cleanObject } from "@/shared/utils/cleanObject";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
@@ -51,6 +53,29 @@ export class UpdateUserUseCase {
         );
       }
 
+      if (updateData.accessScope) {
+        if (!isSelf && !checkRolePriority(reqAdmin.role, updateData.role || userBeforeUpdate.role)) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+            ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+          );
+        }
+        if (
+          !compareLocationOfReqAdminNewUserWarehouse(
+            reqAdmin.role,
+            reqAdmin.accessScope,
+            updateData.accessScope
+          )
+        ) {
+          throw new HttpException(
+            400,
+            ERROR_MESSAGES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH,
+            ERROR_CODES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH
+          );
+        }
+      }
+
       if (updateData?.role) {
         if (!isValidRole(updateData.role)) {
           throw new HttpException(
@@ -75,6 +100,24 @@ export class UpdateUserUseCase {
             ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
           );
         }
+      }
+
+      // If role is updated, access scope is required
+      if (updateData.role && !updateData.accessScope) {
+        throw new HttpException(
+          400,
+          ERROR_MESSAGES.INVALID_ACCESS_SCOPE,
+          ERROR_CODES.INVALID_ACCESS_SCOPE
+        );
+      }
+
+      if (updateData.role && updateData.accessScope) {
+        validateAccessScope(updateData.role, updateData.accessScope);
+      }
+
+      // Update access scope of admin user without change in role
+      if (updateData.accessScope && !updateData.role) {
+        validateAccessScope(userBeforeUpdate.role, updateData.accessScope);
       }
 
       const cleanUpdateData = cleanObject(updateData);

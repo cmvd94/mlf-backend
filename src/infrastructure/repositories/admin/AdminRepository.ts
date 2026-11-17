@@ -220,6 +220,7 @@ export class AdminRepository {
             employeeId: 1,
             phoneNumber: 1,
             isActive: 1,
+            accessScope: 1,
             createdBy: 1,
             updatedBy: 1,
             createdAt: 1,

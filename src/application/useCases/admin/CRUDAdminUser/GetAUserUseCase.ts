@@ -4,6 +4,7 @@ import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { SuperAdmin } from "@/shared/constants/adminRole";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
+import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { inject, injectable } from "tsyringe";
@@ -30,7 +31,12 @@ export class GetAUserUseCase {
 
       const isSelf = user._id?.toString() === reqAdmin?.userId;
       const isSubordinate = reqAdmin
-        ? checkRolePriority(reqAdmin.role, user.role)
+        ? checkRolePriority(reqAdmin.role, user.role) &&
+          compareLocationOfReqAdminNewUserWarehouse(
+            reqAdmin.role,
+            reqAdmin.accessScope,
+            user.accessScope
+          )
         : false;
 
       const enrichedUser = {

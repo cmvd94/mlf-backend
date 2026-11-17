@@ -11,4 +11,6 @@ export enum AdminErrorStage {
   AdminLoginController = "AdminLoginController",
   AdminLogoutController = "AdminLogoutController",
   ChangePasswordUseCase = "ChangePasswordUseCase",
+  AdminStaticDataUseCase = "AdminStaticDataUseCase",
+  AdminStaticDataController = "AdminStaticDataController",
 }

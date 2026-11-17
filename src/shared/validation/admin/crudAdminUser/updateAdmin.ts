@@ -19,6 +19,14 @@ export const UpdateAdminUserRouteSchema = z.object({
         .regex(/^mlf_\d+$/i, "Employee ID must follow format like mlf_01")
         .optional(),
       language: z.nativeEnum(Language).optional(),
+      accessScope: z
+        .object({
+          country: z.string().optional(),
+          zone: z.string().optional(),
+          state: z.string().optional(),
+          district: z.string().optional(),
+        })
+        .optional(),
     })
     .superRefine((data, ctx) => {
       if ("phoneNumber" in data) {

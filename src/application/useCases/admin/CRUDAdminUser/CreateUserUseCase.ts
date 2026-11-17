@@ -14,6 +14,8 @@ import { Types } from "mongoose";
 import { CreateAdminUserDTO } from "@/shared/dto/admin/crudUserDTO";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
+import { validateAccessScope } from "@/shared/utils/accessScopeValidation";
+import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import bcrypt from "bcryptjs";
 
 @injectable()
@@ -31,6 +33,32 @@ export class CreateUserUseCase {
           403,
           ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
           ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
+
+      // Validate accessScope of new user
+      if (!payload.accessScope) {
+        throw new HttpException(
+          400,
+          ERROR_MESSAGES.INVALID_ACCESS_SCOPE,
+          ERROR_CODES.INVALID_ACCESS_SCOPE
+        );
+      }
+
+      validateAccessScope(payload.role, payload.accessScope);
+
+      // Compare accessScope of admin and new user to check if new user is in allowed location
+      if (
+        !compareLocationOfReqAdminNewUserWarehouse(
+          reqAdmin.role,
+          reqAdmin.accessScope,
+          payload.accessScope
+        )
+      ) {
+        throw new HttpException(
+          400,
+          ERROR_MESSAGES.NEW_USER_ACCESS_SCOPE_NOT_MATCH,
+          ERROR_CODES.NEW_USER_ACCESS_SCOPE_NOT_MATCH
         );
       }
 

@@ -14,6 +14,17 @@ export const CreateAdminUserRouteSchema = z.object({
     role: z.nativeEnum(AdminRole, {
       errorMap: () => ({ message: "Invalid role" }),
     }),
+    accessScope: z.object(
+      {
+        country: z.string().trim().optional(),
+        zone: z.string().trim().optional(),
+        state: z.string().trim().optional(),
+        district: z.string().trim().optional(),
+      },
+      {
+        required_error: "Access scope is required",
+      }
+    ),
     employeeId: z
       .string()
       .trim()

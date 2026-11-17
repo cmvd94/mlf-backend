@@ -4,6 +4,7 @@ import { GetAdminUsersFilterDTO } from "@/shared/dto/admin/crudUserDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { AdminRole, SuperAdmin } from "@/shared/constants/adminRole";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
+import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
@@ -26,6 +27,34 @@ export class GetUserListUseCase {
       if (dto.role) query.role = dto.role;
       if (dto.isActive !== undefined) query.isActive = dto.isActive;
 
+      // Apply geographic scope filtering if requester is not Super Admin
+      if (reqAdmin && reqAdmin.role !== SuperAdmin.SUPER_ADMIN && reqAdmin.accessScope) {
+        if (reqAdmin.accessScope.country) {
+          query["accessScope.country"] = reqAdmin.accessScope.country;
+        }
+        if (
+          reqAdmin.role !== AdminRole.GENERAL_MANAGER &&
+          reqAdmin.accessScope.zone
+        ) {
+          query["accessScope.zone"] = reqAdmin.accessScope.zone;
+        }
+        if (
+          reqAdmin.role !== AdminRole.GENERAL_MANAGER &&
+          reqAdmin.role !== AdminRole.ZONE_HEAD &&
+          reqAdmin.accessScope.state
+        ) {
+          query["accessScope.state"] = reqAdmin.accessScope.state;
+        }
+        if (
+          reqAdmin.role !== AdminRole.GENERAL_MANAGER &&
+          reqAdmin.role !== AdminRole.ZONE_HEAD &&
+          reqAdmin.role !== AdminRole.REGIONAL_MANAGER &&
+          reqAdmin.accessScope.district
+        ) {
+          query["accessScope.district"] = reqAdmin.accessScope.district;
+        }
+      }
+
       const page = dto.page || 1;
       const limit = dto.limit || 10;
 
@@ -42,7 +71,12 @@ export class GetUserListUseCase {
       const enrichedUserList = rawUserList.map((user: any) => {
         const isSelf = user._id?.toString() === userId;
         const isSubordinate = reqAdmin
-          ? checkRolePriority(reqAdmin.role, user.role)
+          ? checkRolePriority(reqAdmin.role, user.role) &&
+            compareLocationOfReqAdminNewUserWarehouse(
+              reqAdmin.role,
+              reqAdmin.accessScope,
+              user.accessScope
+            )
           : false;
 
         return {

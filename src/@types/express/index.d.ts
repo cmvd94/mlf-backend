@@ -1,4 +1,5 @@
 import { role } from "@/shared/constants/adminRole";
+import { AccessScope } from "@/shared/utils/validateLocationAdminNewUser";
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -7,7 +8,9 @@ declare module "express-serve-static-core" {
       name: string;
       role: role;
       deviceId: string;
+      accessScope?: AccessScope;
     };
     rawBody?: string;
   }
 }
+

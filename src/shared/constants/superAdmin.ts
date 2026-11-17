@@ -13,6 +13,7 @@ export const superAdminDetails = async () => {
     phoneNumber: "9626298790",
     password: hashedPassword,
     role: SuperAdmin.SUPER_ADMIN,
+    accessScope: {},
     createdBy: objectId,
     updatedBy: objectId,
   };

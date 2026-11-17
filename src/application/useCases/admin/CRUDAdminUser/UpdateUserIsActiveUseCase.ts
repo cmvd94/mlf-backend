@@ -13,6 +13,7 @@ import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
+import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 
 @injectable()
 export class UpdateUserIsActiveUseCase {
@@ -48,6 +49,20 @@ export class UpdateUserIsActiveUseCase {
             403,
             ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
             ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+          );
+        }
+
+        if (
+          !compareLocationOfReqAdminNewUserWarehouse(
+            reqAdmin.role,
+            reqAdmin.accessScope,
+            targetUser.accessScope
+          )
+        ) {
+          throw new HttpException(
+            400,
+            ERROR_MESSAGES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH,
+            ERROR_CODES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH
           );
         }
       }

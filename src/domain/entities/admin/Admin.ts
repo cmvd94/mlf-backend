@@ -10,6 +10,23 @@ import { Environment } from "@/shared/constants/environment";
 import { Language } from "@/shared/constants/locale";
 import { Types } from "mongoose";
 
+export class AdminAccessScope {
+  @prop()
+  country?: string;
+
+  @prop()
+  zone?: string;
+
+  @prop()
+  state?: string;
+
+  @prop()
+  district?: string;
+
+  @prop({ type: () => [String], default: [] })
+  pincode?: string[];
+}
+
 @modelOptions({
   schemaOptions: {
     timestamps: true,
@@ -52,6 +69,9 @@ export class Admin {
 
   @prop({ required: true })
   role!: AdminRole | SuperAdmin;
+
+  @prop({ type: () => AdminAccessScope, default: {} })
+  accessScope!: AdminAccessScope;
 
   @prop({
     type: String,

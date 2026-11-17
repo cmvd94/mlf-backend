@@ -3,11 +3,13 @@ import { Application } from "express";
 import {
   crudAdminController,
   adminAuthController,
+  adminStaticDataController,
 } from "./di/initResolveDependencies";
 
 export const initAdminRoutes = (app: Application) => {
   adminRegisterRoute(app, [
     adminAuthController,
     crudAdminController,
+    adminStaticDataController,
   ]);
 };
