@@ -1,6 +1,7 @@
 import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
+import { GodownModel } from "@/domain/entities/admin/Godown";
 import { UpdateIsActiveUserDTO } from "@/shared/dto/admin/crudUserDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectIdsList } from "@/shared/utils/generateObjectId";
@@ -64,6 +65,33 @@ export class UpdateUserIsActiveUseCase {
             ERROR_MESSAGES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH,
             ERROR_CODES.UPDATE_USER_ACCESS_SCOPE_NOT_MATCH
           );
+        }
+
+        if (!body.isActive) {
+          const isAssignedToGodown =
+            Boolean(
+              (targetUser.godownId && targetUser.godownId.length > 0) ||
+              (targetUser.accessScope?.pincode && targetUser.accessScope.pincode.length > 0)
+            ) ||
+            Boolean(
+              await GodownModel.exists({
+                isDeleted: false,
+                $or: [
+                  { godownManager: targetUser._id },
+                  { billingUser: targetUser._id },
+                  { supervisors: targetUser._id },
+                  { assistants: targetUser._id },
+                ],
+              })
+            );
+
+          if (isAssignedToGodown) {
+            throw new HttpException(
+              400,
+              ERROR_MESSAGES.USER_ASSIGNED_TO_GODOWN,
+              ERROR_CODES.USER_ASSIGNED_TO_GODOWN
+            );
+          }
         }
       }
 

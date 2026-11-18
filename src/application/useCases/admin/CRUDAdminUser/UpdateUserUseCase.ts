@@ -1,5 +1,6 @@
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { AdminSessionRepository } from "@/infrastructure/repositories/admin/AdminSessionRepository";
+import { GodownModel } from "@/domain/entities/admin/Godown";
 import {
   ERROR_MESSAGES,
   ERROR_CODES,
@@ -51,6 +52,60 @@ export class UpdateUserUseCase {
           ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
           ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
         );
+      }
+
+      // Check if user is assigned to any godown
+      const userObjectId = generateObjectId(userId);
+      const isAssignedToGodown =
+        Boolean(
+          (userBeforeUpdate.godownId && userBeforeUpdate.godownId.length > 0) ||
+          (userBeforeUpdate.accessScope?.pincode && userBeforeUpdate.accessScope.pincode.length > 0)
+        ) ||
+        (userObjectId
+          ? Boolean(
+              await GodownModel.exists({
+                isDeleted: false,
+                $or: [
+                  { godownManager: userObjectId },
+                  { billingUser: userObjectId },
+                  { supervisors: userObjectId },
+                  { assistants: userObjectId },
+                ],
+              })
+            )
+          : false);
+
+      if (isAssignedToGodown) {
+        // Changing role is not allowed when assigned to godown
+        if (updateData.role && updateData.role !== userBeforeUpdate.role) {
+          throw new HttpException(
+            400,
+            ERROR_MESSAGES.USER_ASSIGNED_TO_GODOWN,
+            ERROR_CODES.USER_ASSIGNED_TO_GODOWN
+          );
+        }
+
+        // Changing region (accessScope) is not allowed when assigned to godown
+        if (updateData.accessScope) {
+          const currentScope = userBeforeUpdate.accessScope || {};
+          const isRegionChanged =
+            (updateData.accessScope.country !== undefined &&
+              (updateData.accessScope.country || "") !== (currentScope.country || "")) ||
+            (updateData.accessScope.zone !== undefined &&
+              (updateData.accessScope.zone || "") !== (currentScope.zone || "")) ||
+            (updateData.accessScope.state !== undefined &&
+              (updateData.accessScope.state || "") !== (currentScope.state || "")) ||
+            (updateData.accessScope.district !== undefined &&
+              (updateData.accessScope.district || "") !== (currentScope.district || ""));
+
+          if (isRegionChanged) {
+            throw new HttpException(
+              400,
+              ERROR_MESSAGES.USER_ASSIGNED_TO_GODOWN,
+              ERROR_CODES.USER_ASSIGNED_TO_GODOWN
+            );
+          }
+        }
       }
 
       if (updateData.accessScope) {

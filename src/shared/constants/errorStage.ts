@@ -15,4 +15,12 @@ export enum AdminErrorStage {
   ChangePasswordUseCase = "ChangePasswordUseCase",
   AdminStaticDataUseCase = "AdminStaticDataUseCase",
   AdminStaticDataController = "AdminStaticDataController",
+  GodownController = "GodownController",
+  CreateGodownUseCase = "CreateGodownUseCase",
+  UpdateGodownUseCase = "UpdateGodownUseCase",
+  GetAGodownUseCase = "GetAGodownUseCase",
+  GetGodownListUseCase = "GetGodownListUseCase",
+  UpdateGodownIsActiveUseCase = "UpdateGodownIsActiveUseCase",
+  DeleteGodownUseCase = "DeleteGodownUseCase",
+  GetEligibleGodownAdminsUseCase = "GetEligibleGodownAdminsUseCase",
 }

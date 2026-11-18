@@ -73,6 +73,9 @@ export class Admin {
   @prop({ type: () => AdminAccessScope, default: {} })
   accessScope!: AdminAccessScope;
 
+  @prop({ ref: () => "Godown", default: [] })
+  godownId!: Ref<any>[];
+
   @prop({
     type: String,
     enum: Object.values(Language),
@@ -81,16 +84,16 @@ export class Admin {
   })
   language?: string;
 
-  @prop({ ref: () => Admin, required: false })
+  @prop({ ref: () => "Admin", required: false })
   createdBy?: Ref<Admin>;
 
-  @prop({ ref: () => Admin, required: false })
+  @prop({ ref: () => "Admin", required: false })
   updatedBy?: Ref<Admin>;
 
   @prop({ default: false })
   isDeleted!: boolean;
 
-  @prop({ ref: () => Admin, required: false })
+  @prop({ ref: () => "Admin", required: false })
   deletedBy?: Ref<Admin>;
 
   @prop({ required: false })

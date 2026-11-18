@@ -10,6 +10,15 @@
   "ADMIN": {
     "STATIC_DATA": "Admin static data fetched successfully"
   },
+  "GODOWN": {
+    "CREATED": "Godown created successfully",
+    "UPDATED": "Godown updated successfully",
+    "DELETED": "Godown deleted successfully",
+    "FETCHED": "Godown fetched successfully",
+    "LIST_FETCHED": "Godown list fetched successfully",
+    "STATUS_UPDATED": "Godown status updated successfully",
+    "ELIGIBLE_ADMINS_FETCHED": "Eligible admins fetched successfully"
+  },
   "ADMIN_AUTH": {
     "LOGIN_SUCCESSFUL": "Admin login successful",
     "LOGOUT_SUCCESS": "Admin logged out successfully",
@@ -59,7 +68,8 @@
     "NEW_USER_ACCESS_SCOPE_NOT_MATCH": "New user access scope does not match admin access scope",
     "UPDATE_USER_ACCESS_SCOPE_NOT_MATCH": "Update user access scope does not match admin access scope",
     "DELETE_USER_ACCESS_SCOPE_NOT_MATCH": "Delete user access scope does not match admin access scope",
-    "USER_ASSIGNED_TO_WAREHOUSE": "User is assigned to branch/warehouse",
+    "USER_ASSIGNED_TO_WAREHOUSE": "User is assigned to godown",
+    "USER_ASSIGNED_TO_GODOWN": "User is assigned to godown",
     "INVALID_INPUT": "Invalid input provided",
     "SUPER_ADMIN_CANNOT_BE_UPDATED": "Super admin cannot be updated.",
     "ADMIN_CANNOT_UPDATE_SELF": "You cannot update your own status.",

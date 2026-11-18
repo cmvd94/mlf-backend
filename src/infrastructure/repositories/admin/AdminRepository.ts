@@ -158,13 +158,14 @@ export class AdminRepository {
   updatePassword = async (
     userId: string,
     password: string,
-    updatedBy: Types.ObjectId
+    updatedBy: Types.ObjectId,
+    session?: ClientSession
   ) => {
     try {
       const updatedUser = await AdminModel.findOneAndUpdate(
         { _id: generateObjectId(userId), isDeleted: false },
         { $set: { password, updatedBy } },
-        { new: true }
+        { new: true, session }
       ).exec();
       if (!updatedUser) {
         throw new HttpException(
@@ -221,6 +222,7 @@ export class AdminRepository {
             phoneNumber: 1,
             isActive: 1,
             accessScope: 1,
+            godownId: 1,
             createdBy: 1,
             updatedBy: 1,
             createdAt: 1,
@@ -308,6 +310,55 @@ export class AdminRepository {
     } catch (error) {
       throw new Error(
         `[ADMIN REPOSITORY]: Failed to update isActive of user. Error object: ${error}`
+      );
+    }
+  };
+
+  updateAdminForGodown = async (
+    adminIds: Types.ObjectId[],
+    updateData: any,
+    session?: ClientSession
+  ) => {
+    try {
+      return await AdminModel.updateMany(
+        { _id: { $in: adminIds }, isDeleted: false },
+        updateData,
+        { session }
+      ).exec();
+    } catch (error) {
+      throw new Error(
+        `[ADMIN REPOSITORY]: Failed to update user document for godown. Error object: ${error}`
+      );
+    }
+  };
+
+  removeGodownFromAllAdmins = async (
+    godownId: Types.ObjectId,
+    session?: ClientSession
+  ) => {
+    try {
+      return await AdminModel.updateMany(
+        { godownId: godownId },
+        { $pull: { godownId: godownId } },
+        { session }
+      ).exec();
+    } catch (error) {
+      throw new Error(
+        `[ADMIN REPOSITORY]: Failed to remove godownId from admins. Error object: ${error}`
+      );
+    }
+  };
+
+  findEligibleAdminsForGodown = async (query: any, limit = 100) => {
+    try {
+      return await AdminModel.find(query)
+        .select("_id name employeeId role phoneNumber email accessScope")
+        .limit(limit)
+        .lean()
+        .exec();
+    } catch (error) {
+      throw new Error(
+        `[ADMIN REPOSITORY]: Failed to find eligible admins for godown. Error object: ${error}`
       );
     }
   };

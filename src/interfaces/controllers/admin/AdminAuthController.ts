@@ -82,7 +82,7 @@ export class AdminAuthController {
       res
         .status(200)
         .json(
-          sendResponse(req, "Password changed successfully", this.logger, result)
+          sendResponse(req, "ADMIN_AUTH.PASSWORD_CHANGED", this.logger, result)
         );
     } catch (error) {
       sendErrorResponse(
