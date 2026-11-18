@@ -8,6 +8,7 @@ import { GetUserListUseCase } from "@/application/useCases/admin/CRUDAdminUser/G
 import { GetAUserUseCase } from "@/application/useCases/admin/CRUDAdminUser/GetAUserUseCase";
 import { UpdateUserIsActiveUseCase } from "@/application/useCases/admin/CRUDAdminUser/UpdateUserIsActiveUseCase";
 import { AdminStaticDataUseCase } from "@/application/useCases/admin/AdminStaticDataUseCase";
+import { AdminLogoutUseCase } from "@/application/useCases/admin/AuthAdmin/AdminLogoutUseCase";
 import { CRUDAdminUserController } from "@/interfaces/controllers/admin/CRUDAdminUserController";
 import { AdminStaticDataController } from "@/interfaces/controllers/admin/AdminStaticDataController";
 
@@ -22,6 +23,7 @@ export const initAdminDI = () => {
   container.registerSingleton(GetAUserUseCase, GetAUserUseCase);
   container.registerSingleton(UpdateUserIsActiveUseCase, UpdateUserIsActiveUseCase);
   container.registerSingleton(AdminStaticDataUseCase, AdminStaticDataUseCase);
+  container.registerSingleton(AdminLogoutUseCase, AdminLogoutUseCase);
 
   container.registerSingleton(CRUDAdminUserController, CRUDAdminUserController);
   container.registerSingleton(AdminStaticDataController, AdminStaticDataController);

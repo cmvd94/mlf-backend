@@ -81,6 +81,9 @@ export class AdminSessionRepository {
         );
       }
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new Error(
         `[Admin Session REPOSITORY]: Failed to remove Admin session document by ID. Error object: ${error}`
       );

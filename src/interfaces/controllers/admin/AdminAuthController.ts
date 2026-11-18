@@ -1,9 +1,10 @@
 import { BasePath } from "@/application/decorators/basePath";
-import { Patch, Post } from "@/application/decorators/HttpMethods";
+import { Delete, Patch, Post } from "@/application/decorators/HttpMethods";
 import { Body, Next, Req, ReqAdmin, Res } from "@/application/decorators/HttpParams";
 import { IsAdminAuthenticated } from "@/application/decorators/adminDefineMetadata";
 import { ValidateSchema } from "@/application/decorators/validateSchemaDefineMetadata";
 import { AdminLoginUseCase } from "@/application/useCases/admin/AuthAdmin/AdminLoginUseCase";
+import { AdminLogoutUseCase } from "@/application/useCases/admin/AuthAdmin/AdminLogoutUseCase";
 import { ChangePasswordUseCase } from "@/application/useCases/admin/AuthAdmin/ChangePasswordUseCase";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
@@ -29,6 +30,8 @@ export class AdminAuthController {
     private adminLoginUseCase: AdminLoginUseCase,
     @inject(ChangePasswordUseCase)
     private changePasswordUseCase: ChangePasswordUseCase,
+    @inject(AdminLogoutUseCase)
+    private adminLogoutUseCase: AdminLogoutUseCase,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -88,6 +91,56 @@ export class AdminAuthController {
         next,
         error,
         AdminErrorStage.ChangePasswordUseCase,
+        this.logger
+      );
+    }
+  }
+
+  @Patch("/logout")
+  @IsAdminAuthenticated()
+  public async logout(
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.adminLogoutUseCase.execute(reqAdmin);
+      res
+        .status(200)
+        .json(sendResponse(req, "ADMIN_AUTH.LOGOUT_SUCCESS", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(
+        req,
+        res,
+        next,
+        error,
+        AdminErrorStage.AdminLogoutController,
+        this.logger
+      );
+    }
+  }
+
+  @Delete("/logout-all")
+  @IsAdminAuthenticated()
+  public async logoutAll(
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.adminLogoutUseCase.executeAll(reqAdmin);
+      res
+        .status(200)
+        .json(sendResponse(req, "ADMIN_AUTH.LOGOUT_ALL", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(
+        req,
+        res,
+        next,
+        error,
+        AdminErrorStage.AdminLogoutController,
         this.logger
       );
     }

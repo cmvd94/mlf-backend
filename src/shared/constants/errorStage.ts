@@ -10,6 +10,8 @@ export enum AdminErrorStage {
   UpdateIsActiveUserUseCase = "UpdateIsActiveUserUseCase",
   AdminLoginController = "AdminLoginController",
   AdminLogoutController = "AdminLogoutController",
+  AdminLogoutUseCase = "AdminLogoutUseCase",
+  AdminLogoutAllUseCase = "AdminLogoutAllUseCase",
   ChangePasswordUseCase = "ChangePasswordUseCase",
   AdminStaticDataUseCase = "AdminStaticDataUseCase",
   AdminStaticDataController = "AdminStaticDataController",
