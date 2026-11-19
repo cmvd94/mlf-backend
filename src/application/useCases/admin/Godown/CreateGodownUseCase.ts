@@ -16,6 +16,7 @@ import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { isValidAccessScope } from "@/shared/utils/accessScopeValidation";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { AdminRole } from "@/shared/constants/adminRole";
+import { GodownType } from "@/domain/entities/admin/Godown";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession, Types } from "mongoose";
 
@@ -85,173 +86,194 @@ export class CreateGodownUseCase {
         district: data.district,
       };
 
-      // 3. Validate Godown Manager (Single user - optional)
-      if (data.godownManagerId) {
-        const manager = await this.adminRepository.findUserById(
-          data.godownManagerId
-        );
-        if (!manager) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_MANAGER_NOT_FOUND,
-            ERROR_CODES.GODOWN_MANAGER_NOT_FOUND
-          );
-        }
-        if (!manager.isActive) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_MANAGER_DISABLED,
-            ERROR_CODES.GODOWN_MANAGER_DISABLED
-          );
-        }
-        if (manager.role !== AdminRole.GODOWN_MANAGER) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_MANAGER_ROLE_INVALID,
-            ERROR_CODES.GODOWN_MANAGER_ROLE_INVALID
-          );
-        }
-        if (
-          !compareLocationOfReqAdminNewUserWarehouse(
-            manager.role,
-            manager.accessScope,
-            godownLocation
-          )
-        ) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH,
-            ERROR_CODES.GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH
-          );
-        }
-      }
+      if (data.type === GodownType.JOBWORK_GODOWN) {
+        // Jobwork godowns do not require admin user assigning (all four fields)
+        const hasManager = Boolean(data.godownManagerId && data.godownManagerId.trim().length > 0);
+        const hasSupervisors = Boolean(data.supervisorId && data.supervisorId.length > 0);
+        const hasAssistants = Boolean(data.assistantId && data.assistantId.length > 0);
+        const hasBillingUser = Boolean(data.billingUserId && data.billingUserId.trim().length > 0);
 
-      // 4. Validate Supervisors (Array of users - optional)
-      if (data.supervisorId?.length) {
-        const supObjectIds = generateObjectIdsList(data.supervisorId);
-        const supervisors = await this.adminRepository.findUsersByIds(
-          supObjectIds
-        );
-        if (supervisors.length !== data.supervisorId.length) {
+        if (hasManager || hasSupervisors || hasAssistants || hasBillingUser) {
           throw new HttpException(
             400,
-            ERROR_MESSAGES.GODOWN_SUPERVISOR_NOT_FOUND,
-            ERROR_CODES.GODOWN_SUPERVISOR_NOT_FOUND
+            ERROR_MESSAGES.JOBWORK_GODOWN_ADMIN_NOT_ALLOWED,
+            ERROR_CODES.JOBWORK_GODOWN_ADMIN_NOT_ALLOWED
           );
         }
-        for (const sup of supervisors) {
-          if (!sup.isActive) {
+
+        data.godownManagerId = undefined;
+        data.supervisorId = [];
+        data.assistantId = [];
+        data.billingUserId = undefined;
+      } else {
+        // 3. Validate Godown Manager (Single user - optional for company godown)
+        if (data.godownManagerId) {
+          const manager = await this.adminRepository.findUserById(
+            data.godownManagerId
+          );
+          if (!manager) {
             throw new HttpException(
               400,
-              ERROR_MESSAGES.GODOWN_SUPERVISOR_DISABLED,
-              ERROR_CODES.GODOWN_SUPERVISOR_DISABLED
+              ERROR_MESSAGES.GODOWN_MANAGER_NOT_FOUND,
+              ERROR_CODES.GODOWN_MANAGER_NOT_FOUND
             );
           }
-          if (sup.role !== AdminRole.SUPERVISOR) {
+          if (!manager.isActive) {
             throw new HttpException(
               400,
-              ERROR_MESSAGES.GODOWN_SUPERVISOR_ROLE_INVALID,
-              ERROR_CODES.GODOWN_SUPERVISOR_ROLE_INVALID
+              ERROR_MESSAGES.GODOWN_MANAGER_DISABLED,
+              ERROR_CODES.GODOWN_MANAGER_DISABLED
+            );
+          }
+          if (manager.role !== AdminRole.GODOWN_MANAGER) {
+            throw new HttpException(
+              400,
+              ERROR_MESSAGES.GODOWN_MANAGER_ROLE_INVALID,
+              ERROR_CODES.GODOWN_MANAGER_ROLE_INVALID
             );
           }
           if (
             !compareLocationOfReqAdminNewUserWarehouse(
-              sup.role,
-              sup.accessScope,
+              manager.role,
+              manager.accessScope,
               godownLocation
             )
           ) {
             throw new HttpException(
               400,
-              ERROR_MESSAGES.GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH,
-              ERROR_CODES.GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH
+              ERROR_MESSAGES.GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH,
+              ERROR_CODES.GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH
             );
           }
         }
-      }
 
-      // 5. Validate Assistants (Array of users - optional)
-      if (data.assistantId?.length) {
-        const asstObjectIds = generateObjectIdsList(data.assistantId);
-        const assistants = await this.adminRepository.findUsersByIds(
-          asstObjectIds
-        );
-        if (assistants.length !== data.assistantId.length) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_ASSISTANT_NOT_FOUND,
-            ERROR_CODES.GODOWN_ASSISTANT_NOT_FOUND
+        // 4. Validate Supervisors (Array of users - optional for company godown)
+        if (data.supervisorId?.length) {
+          const supObjectIds = generateObjectIdsList(data.supervisorId);
+          const supervisors = await this.adminRepository.findUsersByIds(
+            supObjectIds
           );
-        }
-        for (const asst of assistants) {
-          if (!asst.isActive) {
+          if (supervisors.length !== data.supervisorId.length) {
             throw new HttpException(
               400,
-              ERROR_MESSAGES.GODOWN_ASSISTANT_DISABLED,
-              ERROR_CODES.GODOWN_ASSISTANT_DISABLED
+              ERROR_MESSAGES.GODOWN_SUPERVISOR_NOT_FOUND,
+              ERROR_CODES.GODOWN_SUPERVISOR_NOT_FOUND
             );
           }
-          if (asst.role !== AdminRole.ASSISTANT) {
+          for (const sup of supervisors) {
+            if (!sup.isActive) {
+              throw new HttpException(
+                400,
+                ERROR_MESSAGES.GODOWN_SUPERVISOR_DISABLED,
+                ERROR_CODES.GODOWN_SUPERVISOR_DISABLED
+              );
+            }
+            if (sup.role !== AdminRole.SUPERVISOR) {
+              throw new HttpException(
+                400,
+                ERROR_MESSAGES.GODOWN_SUPERVISOR_ROLE_INVALID,
+                ERROR_CODES.GODOWN_SUPERVISOR_ROLE_INVALID
+              );
+            }
+            if (
+              !compareLocationOfReqAdminNewUserWarehouse(
+                sup.role,
+                sup.accessScope,
+                godownLocation
+              )
+            ) {
+              throw new HttpException(
+                400,
+                ERROR_MESSAGES.GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH,
+                ERROR_CODES.GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH
+              );
+            }
+          }
+        }
+
+        // 5. Validate Assistants (Array of users - optional for company godown)
+        if (data.assistantId?.length) {
+          const asstObjectIds = generateObjectIdsList(data.assistantId);
+          const assistants = await this.adminRepository.findUsersByIds(
+            asstObjectIds
+          );
+          if (assistants.length !== data.assistantId.length) {
             throw new HttpException(
               400,
-              ERROR_MESSAGES.GODOWN_ASSISTANT_ROLE_INVALID,
-              ERROR_CODES.GODOWN_ASSISTANT_ROLE_INVALID
+              ERROR_MESSAGES.GODOWN_ASSISTANT_NOT_FOUND,
+              ERROR_CODES.GODOWN_ASSISTANT_NOT_FOUND
+            );
+          }
+          for (const asst of assistants) {
+            if (!asst.isActive) {
+              throw new HttpException(
+                400,
+                ERROR_MESSAGES.GODOWN_ASSISTANT_DISABLED,
+                ERROR_CODES.GODOWN_ASSISTANT_DISABLED
+              );
+            }
+            if (asst.role !== AdminRole.ASSISTANT) {
+              throw new HttpException(
+                400,
+                ERROR_MESSAGES.GODOWN_ASSISTANT_ROLE_INVALID,
+                ERROR_CODES.GODOWN_ASSISTANT_ROLE_INVALID
+              );
+            }
+            if (
+              !compareLocationOfReqAdminNewUserWarehouse(
+                asst.role,
+                asst.accessScope,
+                godownLocation
+              )
+            ) {
+              throw new HttpException(
+                400,
+                ERROR_MESSAGES.GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH,
+                ERROR_CODES.GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH
+              );
+            }
+          }
+        }
+
+        // 6. Validate Billing User (Single user - optional for company godown)
+        if (data.billingUserId) {
+          const billingUser = await this.adminRepository.findUserById(
+            data.billingUserId
+          );
+          if (!billingUser) {
+            throw new HttpException(
+              400,
+              ERROR_MESSAGES.GODOWN_BILLING_USER_NOT_FOUND,
+              ERROR_CODES.GODOWN_BILLING_USER_NOT_FOUND
+            );
+          }
+          if (!billingUser.isActive) {
+            throw new HttpException(
+              400,
+              ERROR_MESSAGES.GODOWN_BILLING_USER_DISABLED,
+              ERROR_CODES.GODOWN_BILLING_USER_DISABLED
+            );
+          }
+          if (billingUser.role !== AdminRole.BILLING_USER) {
+            throw new HttpException(
+              400,
+              ERROR_MESSAGES.GODOWN_BILLING_USER_ROLE_INVALID,
+              ERROR_CODES.GODOWN_BILLING_USER_ROLE_INVALID
             );
           }
           if (
             !compareLocationOfReqAdminNewUserWarehouse(
-              asst.role,
-              asst.accessScope,
+              billingUser.role,
+              billingUser.accessScope,
               godownLocation
             )
           ) {
             throw new HttpException(
               400,
-              ERROR_MESSAGES.GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH,
-              ERROR_CODES.GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH
+              ERROR_MESSAGES.GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH,
+              ERROR_CODES.GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH
             );
           }
-        }
-      }
-
-      // 6. Validate Billing User (Single user - optional)
-      if (data.billingUserId) {
-        const billingUser = await this.adminRepository.findUserById(
-          data.billingUserId
-        );
-        if (!billingUser) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_BILLING_USER_NOT_FOUND,
-            ERROR_CODES.GODOWN_BILLING_USER_NOT_FOUND
-          );
-        }
-        if (!billingUser.isActive) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_BILLING_USER_DISABLED,
-            ERROR_CODES.GODOWN_BILLING_USER_DISABLED
-          );
-        }
-        if (billingUser.role !== AdminRole.BILLING_USER) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_BILLING_USER_ROLE_INVALID,
-            ERROR_CODES.GODOWN_BILLING_USER_ROLE_INVALID
-          );
-        }
-        if (
-          !compareLocationOfReqAdminNewUserWarehouse(
-            billingUser.role,
-            billingUser.accessScope,
-            godownLocation
-          )
-        ) {
-          throw new HttpException(
-            400,
-            ERROR_MESSAGES.GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH,
-            ERROR_CODES.GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH
-          );
         }
       }
 

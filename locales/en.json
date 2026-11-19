@@ -79,6 +79,7 @@
     "INVALID_PASSWORD": "Password must be at least 6 characters.",
     "INCORRECT_CURRENT_PASSWORD": "Current password does not match.",
     "NEW_PASSWORD_CANNOT_BE_SAME": "New password cannot be the same as current password.",
-    "PASSWORD_REQUIRED": "Account password is not set. Please contact administrator."
+    "PASSWORD_REQUIRED": "Account password is not set. Please contact administrator.",
+    "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED": "Admin users cannot be assigned to a jobwork godown"
   }
 }

@@ -33,12 +33,13 @@ export const CreateGodownRouteSchema = z.object({
       .string()
       .trim()
       .regex(/^\d{6}$/, "Pin code must be 6 digits"),
-    // Assigned users (all optional):
+    // Assigned users (all optional; not required / not allowed for jobwork godown):
     // godown manager single user
     godownManagerId: z
       .string()
       .trim()
       .regex(/^[a-f\d]{24}$/i, "Invalid Godown Manager ID format")
+      .nullable()
       .optional(),
     // SUPERVISOR []
     supervisorId: z
@@ -48,6 +49,7 @@ export const CreateGodownRouteSchema = z.object({
           .trim()
           .regex(/^[a-f\d]{24}$/i, "Invalid Supervisor ID format")
       )
+      .nullable()
       .optional(),
     // ASSISTANT []
     assistantId: z
@@ -57,12 +59,14 @@ export const CreateGodownRouteSchema = z.object({
           .trim()
           .regex(/^[a-f\d]{24}$/i, "Invalid Assistant ID format")
       )
+      .nullable()
       .optional(),
     // BILLING_USER single user
     billingUserId: z
       .string()
       .trim()
       .regex(/^[a-f\d]{24}$/i, "Invalid Billing User ID format")
+      .nullable()
       .optional(),
     isActive: z.boolean().optional().default(true),
   }),

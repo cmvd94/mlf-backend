@@ -10,10 +10,10 @@ export interface CreateGodownDTO {
   state: string;
   district: string;
   pincode: string;
-  godownManagerId?: string;
-  supervisorId?: string[];
-  assistantId?: string[];
-  billingUserId?: string;
+  godownManagerId?: string | null;
+  supervisorId?: string[] | null;
+  assistantId?: string[] | null;
+  billingUserId?: string | null;
   isActive?: boolean;
 }
 
