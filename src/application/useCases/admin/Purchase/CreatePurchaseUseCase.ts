@@ -17,6 +17,8 @@ import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { FINANCIAL_CONFIG } from "@/shared/constants/financialConfig";
+import { withTransaction } from "@/shared/utils/withTransaction";
+import { ClientSession } from "mongoose";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessages";
 
@@ -71,7 +73,7 @@ export class CreatePurchaseUseCase {
       }
 
       // 3. Validate each item line including its individual assigned delivered godown & hierarchy access
-      const calculatedItems = [];
+      const calculatedItems: any[] = [];
       let subTotal = 0;
       let totalActualQuantity = 0;
       let totalBilledQuantity = 0;
@@ -160,57 +162,81 @@ export class CreatePurchaseUseCase {
         totalAmount = Number((subTotal + gstAmount).toFixed(2));
       }
 
-      // 4. Generate sequential Purchase Number
-      const seq = await this.counterRepository.getNextSequence("PURCHASE_NUMBER", this.logger);
-      const purchaseNumber = `PUR_${seq.toString().padStart(4, "0")}`;
+      // 4. Atomically generate sequence, create stock batches, update item stocks, and create purchase
+      const purchaseObjectId = generateObjectId();
 
-      // 5. Create Purchase entry with individual item godown assignments
-      const purchaseId = await this.purchaseRepository.createPurchase({
-        purchaseNumber,
-        date: parseVoucherDate(dto.date),
-        partyId: generateObjectId(dto.partyId) as any,
-        purchaseTypeId: generateObjectId(dto.purchaseTypeId) as any,
-        items: calculatedItems,
-        subTotal,
-        isGstBill,
-        gstPercentage,
-        gstAmount,
-        totalAmount,
-        totalActualQuantity,
-        totalBilledQuantity,
-        // Legacy single item fields mirror for first item
-        itemId: calculatedItems[0].itemId,
-        batchNo: calculatedItems[0].batchNo,
-        uomId: calculatedItems[0].uomId,
-        uomQuantity: calculatedItems[0].uomQuantity,
-        actualQuantity: calculatedItems[0].actualQuantity,
-        billedQuantity: calculatedItems[0].billedQuantity,
-        rate: calculatedItems[0].rate,
-        perId: calculatedItems[0].perId,
-        amount: totalAmount,
-        notes: dto.notes?.trim() || "",
-        isActive: true,
-        createdBy: generateObjectId(reqAdmin.userId),
+      await withTransaction(async (session: ClientSession) => {
+        const seq = await this.counterRepository.getNextSequence("PURCHASE_NUMBER", this.logger, session);
+        const purchaseNumber = `PUR_${seq.toString().padStart(4, "0")}`;
+
+        // Create a GodownStock document for each purchase item with batch number & important stock info
+        for (const calculatedItem of calculatedItems) {
+          const stockDoc = await this.godownStockRepository.createBatchStock(
+            {
+              godownId: calculatedItem.godownId,
+              itemId: calculatedItem.itemId,
+              batchNo: calculatedItem.batchNo,
+              currentStock: calculatedItem.actualQuantity,
+              initialStock: calculatedItem.actualQuantity,
+              uomId: calculatedItem.uomId,
+              uomQuantity: calculatedItem.uomQuantity,
+              perId: calculatedItem.perId,
+              purchaseId: purchaseObjectId,
+              sourceType: "PURCHASE",
+              createdBy: reqAdmin.userId,
+              updatedBy: reqAdmin.userId,
+            },
+            session
+          );
+
+          // Store its _id in the item line
+          (calculatedItem as any).godownStockId = stockDoc._id;
+
+          // Also maintain aggregate item stock
+          await this.itemRepository.adjustStockQuantity(
+            calculatedItem.itemId.toString(),
+            calculatedItem.actualQuantity,
+            session
+          );
+        }
+
+        // Create Purchase entry with individual item godown assignments and godownStockId references
+        await this.purchaseRepository.createPurchase(
+          {
+            _id: purchaseObjectId,
+            purchaseNumber,
+            date: parseVoucherDate(dto.date),
+            partyId: generateObjectId(dto.partyId) as any,
+            purchaseTypeId: generateObjectId(dto.purchaseTypeId) as any,
+            items: calculatedItems,
+            subTotal,
+            isGstBill,
+            gstPercentage,
+            gstAmount,
+            totalAmount,
+            totalActualQuantity,
+            totalBilledQuantity,
+            // Legacy single item fields mirror for first item
+            itemId: calculatedItems[0].itemId,
+            batchNo: calculatedItems[0].batchNo,
+            uomId: calculatedItems[0].uomId,
+            uomQuantity: calculatedItems[0].uomQuantity,
+            actualQuantity: calculatedItems[0].actualQuantity,
+            billedQuantity: calculatedItems[0].billedQuantity,
+            rate: calculatedItems[0].rate,
+            perId: calculatedItems[0].perId,
+            amount: totalAmount,
+            godownStockId: (calculatedItems[0] as any).godownStockId,
+            notes: dto.notes?.trim() || "",
+            isActive: true,
+            createdBy: generateObjectId(reqAdmin.userId),
+          },
+          session
+        );
       });
 
-      // 6. Update stock in each item's assigned godown only!
-      for (const calculatedItem of calculatedItems) {
-        await this.godownStockRepository.adjustStock(
-          calculatedItem.godownId.toString(),
-          calculatedItem.itemId.toString(),
-          calculatedItem.actualQuantity,
-          reqAdmin.userId
-        );
-
-        // Also maintain aggregate item stock
-        await this.itemRepository.adjustStockQuantity(
-          calculatedItem.itemId.toString(),
-          calculatedItem.actualQuantity
-        );
-      }
-
-      // 7. Return complete saved purchase record
-      return await this.purchaseRepository.getPurchaseById(purchaseId);
+      // 5. Return complete saved purchase record
+      return await this.purchaseRepository.getPurchaseById(purchaseObjectId);
     } catch (error) {
       ErrorHandler.handleError(error, AdminErrorStage.PurchaseUseCase, this.logger);
     }

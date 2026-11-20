@@ -68,6 +68,12 @@
   "STOCK_SUMMARY": {
     "FETCHED": "Stock summary fetched successfully"
   },
+  "STOCK_TRANSFER": {
+    "CREATED": "Stock transfer recorded successfully and stocks updated",
+    "FETCHED": "Stock transfer fetched successfully",
+    "LIST_FETCHED": "Stock transfers fetched successfully",
+    "AVAILABLE_STOCK_FETCHED": "Available stocks fetched successfully"
+  },
   "ERRORS": {
     "INTERNAL_SERVER_ERROR": "Something went wrong. Please try again in a moment.",
     "UNKNOWN": "Unknown error occurred",

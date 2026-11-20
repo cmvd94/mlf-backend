@@ -16,6 +16,8 @@ import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { FINANCIAL_CONFIG } from "@/shared/constants/financialConfig";
+import { withTransaction } from "@/shared/utils/withTransaction";
+import { ClientSession } from "mongoose";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessages";
 
@@ -99,7 +101,7 @@ export class UpdatePurchaseUseCase {
 
       // 5. If items are being updated, reconcile stock and calculate amounts
       if (dto.items && Array.isArray(dto.items) && dto.items.length > 0) {
-        const calculatedItems = [];
+        const calculatedItems: any[] = [];
         let subTotal = 0;
         let totalActualQuantity = 0;
         let totalBilledQuantity = 0;
@@ -173,56 +175,110 @@ export class UpdatePurchaseUseCase {
 
         subTotal = Number(subTotal.toFixed(2));
 
-        // Revert previous stock
-        if (existingPurchase.items && existingPurchase.items.length > 0) {
-          for (const oldIt of existingPurchase.items) {
-            const oldItemId = (oldIt.itemId as any)?._id || oldIt.itemId;
-            const oldGodown = oldIt.godownId || existingPurchase.godownId;
-            const oldGodownId = (oldGodown as any)?._id || oldGodown;
+        // Reconcile and update GodownStock docs in-place instead of deleting & recreating
+        const existingStockDocs = await this.godownStockRepository.findByPurchaseId(existingPurchase._id);
+        const usedStockDocIds = new Set<string>();
 
-            if (oldGodownId) {
-              await this.godownStockRepository.adjustStock(
-                oldGodownId.toString(),
+        // If legacy purchase had no GodownStock documents, revert previous item stock
+        if (existingStockDocs.length === 0) {
+          if (existingPurchase.items && existingPurchase.items.length > 0) {
+            for (const oldIt of existingPurchase.items) {
+              const oldItemId = (oldIt.itemId as any)?._id || oldIt.itemId;
+              await this.itemRepository.adjustStockQuantity(
                 oldItemId.toString(),
-                -Number(oldIt.actualQuantity),
-                reqAdmin.userId
+                -Number(oldIt.actualQuantity)
               );
             }
+          } else if (existingPurchase.itemId) {
+            const oldItemId = (existingPurchase.itemId as any)?._id || existingPurchase.itemId;
             await this.itemRepository.adjustStockQuantity(
               oldItemId.toString(),
-              -Number(oldIt.actualQuantity)
+              -Number(existingPurchase.actualQuantity)
             );
           }
-        } else if (existingPurchase.itemId) {
-          const oldItemId = (existingPurchase.itemId as any)?._id || existingPurchase.itemId;
-          const oldGodown = existingPurchase.godownId;
-          const oldGodownId = (oldGodown as any)?._id || oldGodown;
-          if (oldGodownId) {
-            await this.godownStockRepository.adjustStock(
-              oldGodownId.toString(),
-              oldItemId.toString(),
-              -Number(existingPurchase.actualQuantity),
-              reqAdmin.userId
-            );
-          }
-          await this.itemRepository.adjustStockQuantity(
-            oldItemId.toString(),
-            -Number(existingPurchase.actualQuantity)
-          );
         }
 
-        // Apply new stock
-        for (const newIt of calculatedItems) {
-          await this.godownStockRepository.adjustStock(
-            newIt.godownId.toString(),
-            newIt.itemId.toString(),
-            newIt.actualQuantity,
-            reqAdmin.userId
-          );
-          await this.itemRepository.adjustStockQuantity(
-            newIt.itemId.toString(),
-            newIt.actualQuantity
-          );
+        for (let i = 0; i < calculatedItems.length; i++) {
+          const newIt = calculatedItems[i];
+          const rawItemDto = dto.items[i];
+
+          // Match corresponding existing GodownStock doc
+          let matchedStockDoc: any = null;
+
+          // 1. Match by explicit godownStockId
+          if (rawItemDto?.godownStockId) {
+            matchedStockDoc = existingStockDocs.find(
+              (doc) => doc._id.toString() === rawItemDto.godownStockId && !usedStockDocIds.has(doc._id.toString())
+            );
+          }
+
+          // 2. Match by existing item's godownStockId reference
+          if (!matchedStockDoc && existingPurchase.items && existingPurchase.items[i]) {
+            const oldItem = existingPurchase.items[i];
+            const oldStockId = (oldItem as any).godownStockId?.toString();
+            if (oldStockId) {
+              matchedStockDoc = existingStockDocs.find(
+                (doc) => doc._id.toString() === oldStockId && !usedStockDocIds.has(doc._id.toString())
+              );
+            }
+          }
+
+          // 3. Match by position index in existingStockDocs
+          if (!matchedStockDoc && i < existingStockDocs.length) {
+            if (!usedStockDocIds.has(existingStockDocs[i]._id.toString())) {
+              matchedStockDoc = existingStockDocs[i];
+            }
+          }
+
+          // 4. Fallback for legacy single item purchase: match root existingPurchase.godownStockId
+          if (!matchedStockDoc && (existingPurchase as any).godownStockId) {
+            const rootStockId = (existingPurchase as any).godownStockId.toString();
+            matchedStockDoc = existingStockDocs.find(
+              (doc) => doc._id.toString() === rootStockId && !usedStockDocIds.has(doc._id.toString())
+            );
+          }
+
+          if (matchedStockDoc) {
+            usedStockDocIds.add(matchedStockDoc._id.toString());
+
+            const oldActualQty = Number(
+              matchedStockDoc.initialStock !== undefined
+                ? matchedStockDoc.initialStock
+                : matchedStockDoc.currentStock
+            ) || 0;
+            const newActualQty = Number(newIt.actualQuantity) || 0;
+            const qtyDelta = newActualQty - oldActualQty;
+
+            // Prevent reduction below transferred/consumed stock
+            if (matchedStockDoc.currentStock + qtyDelta < 0) {
+              throw new HttpException(
+                400,
+                `Cannot reduce purchase quantity for batch "${newIt.batchNo || matchedStockDoc.batchNo}" below already transferred or consumed stock. Current remaining: ${matchedStockDoc.currentStock}, reduction requested: ${Math.abs(qtyDelta)}`,
+                ERROR_CODES.INSUFFICIENT_STOCK
+              );
+            }
+
+            (newIt as any)._matchedStockDoc = matchedStockDoc;
+            (newIt as any)._qtyDelta = qtyDelta;
+            (newIt as any)._oldActualQty = oldActualQty;
+            (newIt as any).godownStockId = matchedStockDoc._id;
+          }
+        }
+
+        // Verify if any removed batch cannot be deleted because stock was transferred
+        for (const unusedDoc of existingStockDocs) {
+          if (!usedStockDocIds.has(unusedDoc._id.toString())) {
+            const initialQty = Number(
+              unusedDoc.initialStock !== undefined ? unusedDoc.initialStock : unusedDoc.currentStock
+            ) || 0;
+            if (unusedDoc.currentStock < initialQty) {
+              throw new HttpException(
+                400,
+                `Cannot remove item batch "${unusedDoc.batchNo}" from purchase because stock has already been transferred or consumed.`,
+                ERROR_CODES.INSUFFICIENT_STOCK
+              );
+            }
+          }
         }
 
         // GST Calculation
@@ -265,6 +321,127 @@ export class UpdatePurchaseUseCase {
         updateData.rate = calculatedItems[0].rate;
         updateData.perId = calculatedItems[0].perId;
         updateData.amount = totalAmount;
+        updateData.godownStockId = (calculatedItems[0] as any).godownStockId;
+
+        // Atomically reconcile stock batches and update purchase in database
+        await withTransaction(async (session: ClientSession) => {
+          // If legacy purchase had no GodownStock documents, revert previous item stock
+          if (existingStockDocs.length === 0) {
+            if (existingPurchase.items && existingPurchase.items.length > 0) {
+              for (const oldIt of existingPurchase.items) {
+                const oldItemId = (oldIt.itemId as any)?._id || oldIt.itemId;
+                await this.itemRepository.adjustStockQuantity(
+                  oldItemId.toString(),
+                  -Number(oldIt.actualQuantity),
+                  session
+                );
+              }
+            } else if (existingPurchase.itemId) {
+              const oldItemId = (existingPurchase.itemId as any)?._id || existingPurchase.itemId;
+              await this.itemRepository.adjustStockQuantity(
+                oldItemId.toString(),
+                -Number(existingPurchase.actualQuantity),
+                session
+              );
+            }
+          }
+
+          for (let i = 0; i < calculatedItems.length; i++) {
+            const newIt = calculatedItems[i];
+            const matchedStockDoc = (newIt as any)._matchedStockDoc;
+            const qtyDelta = (newIt as any)._qtyDelta;
+            const oldActualQty = (newIt as any)._oldActualQty;
+
+            if (matchedStockDoc) {
+              const oldItemId = (matchedStockDoc.itemId?._id || matchedStockDoc.itemId).toString();
+              const newItemId = newIt.itemId.toString();
+
+              if (oldItemId === newItemId) {
+                if (qtyDelta !== 0) {
+                  await this.itemRepository.adjustStockQuantity(newItemId, qtyDelta, session);
+                }
+              } else {
+                // Item changed: revert old item stock and add new item stock
+                await this.itemRepository.adjustStockQuantity(oldItemId, -oldActualQty, session);
+                await this.itemRepository.adjustStockQuantity(newItemId, newIt.actualQuantity, session);
+              }
+
+              // Update existing stock doc in-place without creating a new document
+              await this.godownStockRepository.updateBatchStock(
+                matchedStockDoc._id,
+                {
+                  godownId: newIt.godownId,
+                  itemId: newIt.itemId,
+                  batchNo: newIt.batchNo,
+                  currentStock: Number(matchedStockDoc.currentStock + qtyDelta),
+                  initialStock: newIt.actualQuantity,
+                  uomId: newIt.uomId,
+                  uomQuantity: newIt.uomQuantity,
+                  perId: newIt.perId,
+                  updatedBy: reqAdmin.userId,
+                  isDeleted: false,
+                },
+                session
+              );
+            } else {
+              // New item row: create new GodownStock doc
+              const stockDoc = await this.godownStockRepository.createBatchStock(
+                {
+                  godownId: newIt.godownId,
+                  itemId: newIt.itemId,
+                  batchNo: newIt.batchNo,
+                  currentStock: newIt.actualQuantity,
+                  initialStock: newIt.actualQuantity,
+                  uomId: newIt.uomId,
+                  uomQuantity: newIt.uomQuantity,
+                  perId: newIt.perId,
+                  purchaseId: existingPurchase._id,
+                  sourceType: "PURCHASE",
+                  createdBy: reqAdmin.userId,
+                  updatedBy: reqAdmin.userId,
+                },
+                session
+              );
+
+              (newIt as any).godownStockId = stockDoc._id;
+
+              await this.itemRepository.adjustStockQuantity(
+                newIt.itemId.toString(),
+                newIt.actualQuantity,
+                session
+              );
+            }
+
+            delete (newIt as any)._matchedStockDoc;
+            delete (newIt as any)._qtyDelta;
+            delete (newIt as any)._oldActualQty;
+          }
+
+          // Handle removed rows: soft-delete unused GodownStock docs and revert aggregate stock
+          for (const unusedDoc of existingStockDocs) {
+            if (!usedStockDocIds.has(unusedDoc._id.toString())) {
+              const initialQty = Number(
+                unusedDoc.initialStock !== undefined ? unusedDoc.initialStock : unusedDoc.currentStock
+              ) || 0;
+
+              await this.godownStockRepository.updateBatchStock(
+                unusedDoc._id,
+                {
+                  currentStock: 0,
+                  isDeleted: true,
+                  updatedBy: reqAdmin.userId,
+                },
+                session
+              );
+
+              const oldItemId = (unusedDoc.itemId?._id || unusedDoc.itemId).toString();
+              await this.itemRepository.adjustStockQuantity(oldItemId, -initialQty, session);
+            }
+          }
+
+          // Update purchase record in database
+          await this.purchaseRepository.updatePurchase(id, updateData, session);
+        });
       } else if (dto.isGstBill !== undefined || dto.gstPercentage !== undefined) {
         // Items not modified, but GST configuration updated
         const baseSubTotal =
@@ -297,10 +474,11 @@ export class UpdatePurchaseUseCase {
         updateData.gstPercentage = gstPercentage;
         updateData.gstAmount = gstAmount;
         updateData.totalAmount = totalAmount;
-      }
 
-      // 6. Update database record
-      await this.purchaseRepository.updatePurchase(id, updateData);
+        await this.purchaseRepository.updatePurchase(id, updateData);
+      } else {
+        await this.purchaseRepository.updatePurchase(id, updateData);
+      }
 
       // 7. Return refreshed populated purchase
       return await this.purchaseRepository.getPurchaseById(id);

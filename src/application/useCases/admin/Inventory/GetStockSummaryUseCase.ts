@@ -139,7 +139,7 @@ export class GetStockSummaryUseCase {
         }
       }
 
-      // Reconcile items that have godown stock but no explicit purchase batch entries
+      // Reconcile items with live GodownStock documents (incorporating batch transfers & current balances)
       for (const gs of godownStocks) {
         const iId = gs.itemId.toString();
         const gId = gs.godownId.toString();
@@ -151,26 +151,22 @@ export class GetStockSummaryUseCase {
         }
 
         const batchesForThisItem = itemBatchLinesMap.get(iId)!;
-        // If no batches exist for this item in this godown, add an entry
-        let hasAnyBatchInThisGodown = false;
-        for (const b of batchesForThisItem.values()) {
-          if (b.godownId === gId) {
-            hasAnyBatchInThisGodown = true;
-            break;
-          }
-        }
+        const bNo = (gs.batchNo || "").trim();
+        const batchKey = `${gId}_${bNo}`;
 
-        if (!hasAnyBatchInThisGodown && gs.currentStock > 0) {
-          const stdRate = itemDoc.standardRate || 0;
+        if (gs.currentStock > 0) {
+          const rate = (gs as any).rate && (gs as any).rate > 0 ? (gs as any).rate : (itemDoc.standardRate || 0);
           const qty = Number(gs.currentStock);
-          const val = Number((qty * stdRate).toFixed(2));
-          batchesForThisItem.set(`${gId}_`, {
-            batchNo: "",
+          const val = Number((qty * rate).toFixed(2));
+          batchesForThisItem.set(batchKey, {
+            batchNo: bNo,
             godownId: gId,
             quantity: qty,
             value: val,
-            rate: stdRate,
+            rate: rate,
           });
+        } else if (batchesForThisItem.has(batchKey)) {
+          batchesForThisItem.delete(batchKey);
         }
       }
 

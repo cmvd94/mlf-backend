@@ -34,4 +34,6 @@ export enum AdminErrorStage {
   PurchaseUseCase = "PurchaseUseCase",
   StockSummaryUseCase = "StockSummaryUseCase",
   StockSummaryController = "StockSummaryController",
+  StockTransferUseCase = "StockTransferUseCase",
+  StockTransferController = "StockTransferController",
 }

@@ -76,8 +76,14 @@ import {
 import { AccountInventoryController } from "@/interfaces/controllers/admin/AccountInventoryController";
 import { PurchaseController } from "@/interfaces/controllers/admin/PurchaseController";
 import { StockSummaryRepository } from "@/infrastructure/repositories/admin/StockSummaryRepository";
+import { StockTransferRepository } from "@/infrastructure/repositories/admin/StockTransferRepository";
 import { GetStockSummaryUseCase } from "@/application/useCases/admin/Inventory/GetStockSummaryUseCase";
 import { StockSummaryController } from "@/interfaces/controllers/admin/StockSummaryController";
+import { CreateStockTransferUseCase } from "@/application/useCases/admin/StockTransfer/CreateStockTransferUseCase";
+import { GetStockTransferListUseCase } from "@/application/useCases/admin/StockTransfer/GetStockTransferListUseCase";
+import { GetStockTransferByIdUseCase } from "@/application/useCases/admin/StockTransfer/GetStockTransferByIdUseCase";
+import { GetAvailableStockForTransferUseCase } from "@/application/useCases/admin/StockTransfer/GetAvailableStockForTransferUseCase";
+import { StockTransferController } from "@/interfaces/controllers/admin/StockTransferController";
 
 export const initAdminDI = () => {
   container.registerSingleton(AdminRepository, AdminRepository);
@@ -92,6 +98,7 @@ export const initAdminDI = () => {
   container.registerSingleton(PurchaseRepository, PurchaseRepository);
   container.registerSingleton(GodownStockRepository, GodownStockRepository);
   container.registerSingleton(StockSummaryRepository, StockSummaryRepository);
+  container.registerSingleton(StockTransferRepository, StockTransferRepository);
 
   container.registerSingleton(CreateUserUseCase, CreateUserUseCase);
   container.registerSingleton(UpdateUserUseCase, UpdateUserUseCase);
@@ -148,6 +155,10 @@ export const initAdminDI = () => {
   container.registerSingleton(GetPurchaseByIdUseCase, GetPurchaseByIdUseCase);
   container.registerSingleton(DeletePurchaseUseCase, DeletePurchaseUseCase);
   container.registerSingleton(GetStockSummaryUseCase, GetStockSummaryUseCase);
+  container.registerSingleton(CreateStockTransferUseCase, CreateStockTransferUseCase);
+  container.registerSingleton(GetStockTransferListUseCase, GetStockTransferListUseCase);
+  container.registerSingleton(GetStockTransferByIdUseCase, GetStockTransferByIdUseCase);
+  container.registerSingleton(GetAvailableStockForTransferUseCase, GetAvailableStockForTransferUseCase);
 
   container.registerSingleton(CRUDAdminUserController, CRUDAdminUserController);
   container.registerSingleton(AdminStaticDataController, AdminStaticDataController);
@@ -155,4 +166,5 @@ export const initAdminDI = () => {
   container.registerSingleton(AccountInventoryController, AccountInventoryController);
   container.registerSingleton(PurchaseController, PurchaseController);
   container.registerSingleton(StockSummaryController, StockSummaryController);
+  container.registerSingleton(StockTransferController, StockTransferController);
 };

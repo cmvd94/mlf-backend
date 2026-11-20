@@ -1,4 +1,5 @@
 export interface CreatePurchaseItemDTO {
+  _id?: string;
   itemId: string;
   godownId: string;
   batchNo?: string;
@@ -8,6 +9,7 @@ export interface CreatePurchaseItemDTO {
   billedQuantity: number;
   rate: number;
   perId: string;
+  godownStockId?: string;
 }
 
 export interface CreatePurchaseDTO {

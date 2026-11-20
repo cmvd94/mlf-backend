@@ -107,6 +107,11 @@ export const ERROR_CODES = {
   // Purchase Specific
   PURCHASE_NOT_FOUND: "PURCHASE_NOT_FOUND",
   PURCHASE_NUMBER_ALREADY_EXISTS: "PURCHASE_NUMBER_ALREADY_EXISTS",
+
+  // Stock Transfer Specific
+  STOCK_TRANSFER_NOT_FOUND: "STOCK_TRANSFER_NOT_FOUND",
+  TRANSFER_NUMBER_ALREADY_EXISTS: "TRANSFER_NUMBER_ALREADY_EXISTS",
+  INSUFFICIENT_STOCK: "INSUFFICIENT_STOCK",
 };
 
 export const ERROR_MESSAGES = {
@@ -219,4 +224,9 @@ export const ERROR_MESSAGES = {
   // Purchase Specific
   PURCHASE_NOT_FOUND: "Purchase not found",
   PURCHASE_NUMBER_ALREADY_EXISTS: "Purchase number already exists",
+
+  // Stock Transfer Specific
+  STOCK_TRANSFER_NOT_FOUND: "Stock transfer not found",
+  TRANSFER_NUMBER_ALREADY_EXISTS: "Transfer number already exists",
+  INSUFFICIENT_STOCK: "Insufficient stock available for this operation",
 };

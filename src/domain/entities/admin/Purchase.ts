@@ -44,6 +44,9 @@ export class PurchaseItem {
 
   @prop({ required: true, default: 0 })
   public amount!: number; // Calculated by backend: billedQuantity * rate / perMultiplier
+
+  @prop({ ref: () => "GodownStock", required: false })
+  public godownStockId?: Ref<any>;
 }
 
 @modelOptions({
@@ -131,6 +134,9 @@ export class Purchase {
 
   @prop({ required: false, default: 0 })
   public amount?: number;
+
+  @prop({ ref: () => "GodownStock", required: false })
+  public godownStockId?: Ref<any>;
 
   @prop({ type: String, trim: true, default: "" })
   public notes?: string;

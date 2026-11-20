@@ -7,6 +7,8 @@ import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
+import { withTransaction } from "@/shared/utils/withTransaction";
+import { ClientSession } from "mongoose";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessages";
 
@@ -94,49 +96,51 @@ export class DeletePurchaseUseCase {
 
       const rootGodownId = (existingPurchase.godownId as any)?._id || existingPurchase.godownId;
 
-      // Revert stock for all items in their respective assigned godowns
-      if (existingPurchase.items && existingPurchase.items.length > 0) {
-        for (const it of existingPurchase.items) {
-          const itemId = (it.itemId as any)?._id || it.itemId;
-          const itemGodown = it.godownId || existingPurchase.godownId;
-          const itemGodownId = (itemGodown as any)?._id || itemGodown;
-
-          if (itemGodown) {
-            const hasAccess = compareAdminAndGodownLocation(reqAdmin, itemGodown as any);
-            if (!hasAccess) {
-              throw new HttpException(
-                403,
-                ERROR_MESSAGES.GODOWN_ACCESS_DENIED,
-                ERROR_CODES.GODOWN_ACCESS_DENIED
-              );
-            }
-          }
-
-          if (itemGodownId) {
-            await this.godownStockRepository.adjustStock(
-              itemGodownId.toString(),
-              itemId.toString(),
-              -Number(it.actualQuantity),
-              reqAdmin.userId
-            );
-          }
-          await this.itemRepository.adjustStockQuantity(itemId.toString(), -Number(it.actualQuantity));
-        }
-      } else if (existingPurchase.itemId) {
-        const itemId = (existingPurchase.itemId as any)?._id || existingPurchase.itemId;
-        if (rootGodownId) {
-          await this.godownStockRepository.adjustStock(
-            rootGodownId.toString(),
-            itemId.toString(),
-            -Number(existingPurchase.actualQuantity),
-            reqAdmin.userId
+      // Verify whether any stock from this purchase has already been transferred or consumed
+      const existingStocks = await this.godownStockRepository.findByPurchaseId(id);
+      for (const stock of existingStocks) {
+        const initial = Number(stock.initialStock !== undefined ? stock.initialStock : stock.currentStock) || 0;
+        if (stock.currentStock < initial) {
+          throw new HttpException(
+            400,
+            `Cannot delete purchase because stock for batch "${stock.batchNo}" has already been transferred or consumed.`,
+            ERROR_CODES.INSUFFICIENT_STOCK
           );
         }
-        await this.itemRepository.adjustStockQuantity(itemId.toString(), -Number(existingPurchase.actualQuantity));
       }
 
-      // Mark purchase deleted
-      return await this.purchaseRepository.deletePurchase(id, reqAdmin.userId);
+      // Revert stock for all items and mark purchase deleted inside a single transaction
+      await withTransaction(async (session: ClientSession) => {
+        await this.godownStockRepository.deleteByPurchaseId(id, reqAdmin.userId, session);
+
+        if (existingPurchase.items && existingPurchase.items.length > 0) {
+          for (const it of existingPurchase.items) {
+            const itemId = (it.itemId as any)?._id || it.itemId;
+            const itemGodown = it.godownId || existingPurchase.godownId;
+
+            if (itemGodown) {
+              const hasAccess = compareAdminAndGodownLocation(reqAdmin, itemGodown as any);
+              if (!hasAccess) {
+                throw new HttpException(
+                  403,
+                  ERROR_MESSAGES.GODOWN_ACCESS_DENIED,
+                  ERROR_CODES.GODOWN_ACCESS_DENIED
+                );
+              }
+            }
+
+            await this.itemRepository.adjustStockQuantity(itemId.toString(), -Number(it.actualQuantity), session);
+          }
+        } else if (existingPurchase.itemId) {
+          const itemId = (existingPurchase.itemId as any)?._id || existingPurchase.itemId;
+          await this.itemRepository.adjustStockQuantity(itemId.toString(), -Number(existingPurchase.actualQuantity), session);
+        }
+
+        // Mark purchase deleted
+        await this.purchaseRepository.deletePurchase(id, reqAdmin.userId, session);
+      });
+
+      return { success: true };
     } catch (error) {
       ErrorHandler.handleError(error, AdminErrorStage.PurchaseUseCase, this.logger);
     }
