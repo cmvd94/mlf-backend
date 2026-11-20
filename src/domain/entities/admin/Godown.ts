@@ -33,7 +33,7 @@ export class Godown {
   @prop({ auto: true })
   public _id!: Types.ObjectId;
 
-  @prop({ required: true, unique: true })
+  @prop({ required: true })
   public godownId!: string;
 
   @prop({ required: true })

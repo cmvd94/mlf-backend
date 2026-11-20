@@ -7,5 +7,6 @@ export interface ReqAdminDTO {
   role: role;
   deviceId: string;
   accessScope?: AccessScope;
+  godownId?: string[];
 }
 

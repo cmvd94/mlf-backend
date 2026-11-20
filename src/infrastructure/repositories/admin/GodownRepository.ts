@@ -443,4 +443,30 @@ export class GodownRepository {
       );
     }
   }
+
+  async getAllGodownsByQuery(query: any = {}) {
+    try {
+      return await GodownModel.find({ ...query, isDeleted: false })
+        .select("_id godownId name type country zone state district pincode isActive")
+        .sort({ name: 1 })
+        .lean();
+    } catch (error) {
+      throw new Error(
+        `[GODOWN REPOSITORY]: Failed to fetch godowns by query: ${error}`
+      );
+    }
+  }
+
+  async getGodownIdsByQuery(query: any = {}): Promise<Types.ObjectId[]> {
+    try {
+      const godowns = await GodownModel.find({ ...query, isDeleted: false })
+        .select("_id")
+        .lean();
+      return godowns.map((g: any) => g._id as Types.ObjectId);
+    } catch (error) {
+      throw new Error(
+        `[GODOWN REPOSITORY]: Failed to fetch godown IDs by query: ${error}`
+      );
+    }
+  }
 }

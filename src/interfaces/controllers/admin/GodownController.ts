@@ -40,6 +40,7 @@ import { GetGodownListUseCase } from "@/application/useCases/admin/Godown/GetGod
 import { DeleteGodownUseCase } from "@/application/useCases/admin/Godown/DeleteGodownUseCase";
 import { UpdateGodownIsActiveUseCase } from "@/application/useCases/admin/Godown/UpdateGodownIsActiveUseCase";
 import { GetEligibleGodownAdminsUseCase } from "@/application/useCases/admin/Godown/GetEligibleGodownAdminsUseCase";
+import { GetGodownStockUseCase } from "@/application/useCases/admin/Godown/GetGodownStockUseCase";
 
 import {
   CreateGodownDTO,
@@ -69,6 +70,8 @@ export class GodownController {
     private updateGodownIsActiveUseCase: UpdateGodownIsActiveUseCase,
     @inject(GetEligibleGodownAdminsUseCase)
     private getEligibleGodownAdminsUseCase: GetEligibleGodownAdminsUseCase,
+    @inject(GetGodownStockUseCase)
+    private getGodownStockUseCase: GetGodownStockUseCase,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -146,6 +149,34 @@ export class GodownController {
   ) {
     try {
       const result = await this.getAGodownUseCase.execute(params.id, reqAdmin);
+      res
+        .status(200)
+        .json(sendResponse(req, "GODOWN.FETCHED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(
+        req,
+        res,
+        next,
+        error,
+        AdminErrorStage.GodownController,
+        this.logger
+      );
+    }
+  }
+
+  @Get("/stock/:id")
+  @ValidateSchema(GetAGodownRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async getGodownStock(
+    @Params() params: GetGodownParamsDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.getGodownStockUseCase.execute(params.id, reqAdmin);
       res
         .status(200)
         .json(sendResponse(req, "GODOWN.FETCHED", this.logger, result));

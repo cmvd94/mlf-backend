@@ -4,6 +4,8 @@ import { CRUDAdminUserController } from "@/interfaces/controllers/admin/CRUDAdmi
 import { AdminAuthController } from "@/interfaces/controllers/admin/AdminAuthController";
 import { AdminStaticDataController } from "@/interfaces/controllers/admin/AdminStaticDataController";
 import { GodownController } from "@/interfaces/controllers/admin/GodownController";
+import { AccountInventoryController } from "@/interfaces/controllers/admin/AccountInventoryController";
+import { PurchaseController } from "@/interfaces/controllers/admin/PurchaseController";
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { CreateUserUseCase } from "@/application/useCases/admin/CRUDAdminUser/CreateUserUseCase";
 import { initLoggerDI } from "./initRegisterLoggerDI";
@@ -20,3 +22,5 @@ export const crudAdminController = container.resolve(CRUDAdminUserController);
 export const adminAuthController = container.resolve(AdminAuthController);
 export const adminStaticDataController = container.resolve(AdminStaticDataController);
 export const godownController = container.resolve(GodownController);
+export const accountInventoryController = container.resolve(AccountInventoryController);
+export const purchaseController = container.resolve(PurchaseController);

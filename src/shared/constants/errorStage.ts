@@ -23,4 +23,13 @@ export enum AdminErrorStage {
   UpdateGodownIsActiveUseCase = "UpdateGodownIsActiveUseCase",
   DeleteGodownUseCase = "DeleteGodownUseCase",
   GetEligibleGodownAdminsUseCase = "GetEligibleGodownAdminsUseCase",
+  AccountInventoryController = "AccountInventoryController",
+  PurchaseController = "PurchaseController",
+  PartyUseCase = "PartyUseCase",
+  PurchaseTypeUseCase = "PurchaseTypeUseCase",
+  UomUseCase = "UomUseCase",
+  PerUnitUseCase = "PerUnitUseCase",
+  ItemGroupUseCase = "ItemGroupUseCase",
+  ItemUseCase = "ItemUseCase",
+  PurchaseUseCase = "PurchaseUseCase",
 }

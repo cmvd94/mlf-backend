@@ -5,6 +5,8 @@ import {
   adminAuthController,
   adminStaticDataController,
   godownController,
+  accountInventoryController,
+  purchaseController,
 } from "./di/initResolveDependencies";
 
 export const initAdminRoutes = (app: Application) => {
@@ -13,5 +15,7 @@ export const initAdminRoutes = (app: Application) => {
     crudAdminController,
     adminStaticDataController,
     godownController,
+    accountInventoryController,
+    purchaseController,
   ]);
 };

@@ -84,6 +84,7 @@ export const authenticateTokenAdmin = async (
       deviceId: decoded.deviceId,
       name: user.name,
       accessScope: user.accessScope,
+      godownId: (user.godownId || []).map((id: any) => id.toString()),
     };
 
     next();

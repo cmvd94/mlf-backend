@@ -83,6 +83,30 @@ export const ERROR_CODES = {
   GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH: "GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH",
   GODOWN_DELETE_FAILED: "GODOWN_DELETE_FAILED",
   JOBWORK_GODOWN_ADMIN_NOT_ALLOWED: "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED",
+  GODOWN_ACCESS_DENIED: "GODOWN_ACCESS_DENIED",
+  GODOWN_INACTIVE: "GODOWN_INACTIVE",
+
+  // Inventory & Masters Specific
+  PARTY_NOT_FOUND: "PARTY_NOT_FOUND",
+  PARTY_NAME_ALREADY_EXISTS: "PARTY_NAME_ALREADY_EXISTS",
+  PARTY_CODE_ALREADY_EXISTS: "PARTY_CODE_ALREADY_EXISTS",
+  PURCHASE_TYPE_NOT_FOUND: "PURCHASE_TYPE_NOT_FOUND",
+  PURCHASE_TYPE_NAME_ALREADY_EXISTS: "PURCHASE_TYPE_NAME_ALREADY_EXISTS",
+  UOM_NOT_FOUND: "UOM_NOT_FOUND",
+  UOM_NAME_ALREADY_EXISTS: "UOM_NAME_ALREADY_EXISTS",
+  UOM_SYMBOL_ALREADY_EXISTS: "UOM_SYMBOL_ALREADY_EXISTS",
+  PER_UNIT_NOT_FOUND: "PER_UNIT_NOT_FOUND",
+  PER_UNIT_NAME_ALREADY_EXISTS: "PER_UNIT_NAME_ALREADY_EXISTS",
+  ITEM_GROUP_NOT_FOUND: "ITEM_GROUP_NOT_FOUND",
+  ITEM_GROUP_NAME_ALREADY_EXISTS: "ITEM_GROUP_NAME_ALREADY_EXISTS",
+  ITEM_GROUP_CODE_ALREADY_EXISTS: "ITEM_GROUP_CODE_ALREADY_EXISTS",
+  ITEM_NOT_FOUND: "ITEM_NOT_FOUND",
+  ITEM_NAME_ALREADY_EXISTS: "ITEM_NAME_ALREADY_EXISTS",
+  ITEM_CODE_ALREADY_EXISTS: "ITEM_CODE_ALREADY_EXISTS",
+
+  // Purchase Specific
+  PURCHASE_NOT_FOUND: "PURCHASE_NOT_FOUND",
+  PURCHASE_NUMBER_ALREADY_EXISTS: "PURCHASE_NUMBER_ALREADY_EXISTS",
 };
 
 export const ERROR_MESSAGES = {
@@ -171,4 +195,28 @@ export const ERROR_MESSAGES = {
   GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH: "Billing user region scope does not match godown region",
   GODOWN_DELETE_FAILED: "Failed to delete godown",
   JOBWORK_GODOWN_ADMIN_NOT_ALLOWED: "Admin users cannot be assigned to a jobwork godown",
+  GODOWN_ACCESS_DENIED: "You do not have access to this godown based on your hierarchy level and region",
+  GODOWN_INACTIVE: "Selected godown is inactive",
+
+  // Inventory & Masters Specific
+  PARTY_NOT_FOUND: "Party not found",
+  PARTY_NAME_ALREADY_EXISTS: "Party with this name already exists",
+  PARTY_CODE_ALREADY_EXISTS: "Party code already exists",
+  PURCHASE_TYPE_NOT_FOUND: "Purchase type not found",
+  PURCHASE_TYPE_NAME_ALREADY_EXISTS: "Purchase type with this name already exists",
+  UOM_NOT_FOUND: "Unit of measurement not found",
+  UOM_NAME_ALREADY_EXISTS: "Unit of measurement with this name already exists",
+  UOM_SYMBOL_ALREADY_EXISTS: "Unit of measurement with this symbol already exists",
+  PER_UNIT_NOT_FOUND: "Per unit not found",
+  PER_UNIT_NAME_ALREADY_EXISTS: "Per unit with this name already exists",
+  ITEM_GROUP_NOT_FOUND: "Item group not found",
+  ITEM_GROUP_NAME_ALREADY_EXISTS: "Item group with this name already exists",
+  ITEM_GROUP_CODE_ALREADY_EXISTS: "Item group code already exists",
+  ITEM_NOT_FOUND: "Item not found",
+  ITEM_NAME_ALREADY_EXISTS: "Item with this name already exists",
+  ITEM_CODE_ALREADY_EXISTS: "Item code already exists",
+
+  // Purchase Specific
+  PURCHASE_NOT_FOUND: "Purchase not found",
+  PURCHASE_NUMBER_ALREADY_EXISTS: "Purchase number already exists",
 };

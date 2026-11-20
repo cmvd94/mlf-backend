@@ -25,6 +25,46 @@
     "LOGOUT_ALL": "Admin logged out from all devices successfully",
     "PASSWORD_CHANGED": "Password changed successfully"
   },
+  "INVENTORY": {
+    "PARTY_CREATED": "Party created successfully",
+    "PARTY_UPDATED": "Party updated successfully",
+    "PARTY_DELETED": "Party deleted successfully",
+    "PARTY_FETCHED": "Party fetched successfully",
+    "PARTY_LIST_FETCHED": "Party list fetched successfully",
+    "PURCHASE_TYPE_CREATED": "Purchase type created successfully",
+    "PURCHASE_TYPE_UPDATED": "Purchase type updated successfully",
+    "PURCHASE_TYPE_DELETED": "Purchase type deleted successfully",
+    "PURCHASE_TYPE_FETCHED": "Purchase type fetched successfully",
+    "PURCHASE_TYPE_LIST_FETCHED": "Purchase type list fetched successfully",
+    "UOM_CREATED": "Unit of measurement created successfully",
+    "UOM_UPDATED": "Unit of measurement updated successfully",
+    "UOM_DELETED": "Unit of measurement deleted successfully",
+    "UOM_FETCHED": "Unit of measurement fetched successfully",
+    "UOM_LIST_FETCHED": "Unit of measurement list fetched successfully",
+    "PER_UNIT_CREATED": "Per unit created successfully",
+    "PER_UNIT_UPDATED": "Per unit updated successfully",
+    "PER_UNIT_DELETED": "Per unit deleted successfully",
+    "PER_UNIT_FETCHED": "Per unit fetched successfully",
+    "PER_UNIT_LIST_FETCHED": "Per unit list fetched successfully",
+    "ITEM_GROUP_CREATED": "Item group created successfully",
+    "ITEM_GROUP_UPDATED": "Item group updated successfully",
+    "ITEM_GROUP_DELETED": "Item group deleted successfully",
+    "ITEM_GROUP_FETCHED": "Item group fetched successfully",
+    "ITEM_GROUP_LIST_FETCHED": "Item group list fetched successfully",
+    "ITEM_CREATED": "Item created successfully",
+    "ITEM_UPDATED": "Item updated successfully",
+    "ITEM_DELETED": "Item deleted successfully",
+    "ITEM_FETCHED": "Item fetched successfully",
+    "ITEM_LIST_FETCHED": "Item list fetched successfully",
+    "MASTERS_FETCHED": "Account and inventory masters fetched successfully"
+  },
+  "PURCHASE": {
+    "CREATED": "Purchase entry recorded successfully and stock updated",
+    "UPDATED": "Purchase entry updated successfully",
+    "DELETED": "Purchase entry deleted successfully and stock reverted",
+    "FETCHED": "Purchase entry fetched successfully",
+    "LIST_FETCHED": "Purchase list fetched successfully"
+  },
   "ERRORS": {
     "INTERNAL_SERVER_ERROR": "Something went wrong. Please try again in a moment.",
     "UNKNOWN": "Unknown error occurred",
@@ -80,6 +120,11 @@
     "INCORRECT_CURRENT_PASSWORD": "Current password does not match.",
     "NEW_PASSWORD_CANNOT_BE_SAME": "New password cannot be the same as current password.",
     "PASSWORD_REQUIRED": "Account password is not set. Please contact administrator.",
-    "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED": "Admin users cannot be assigned to a jobwork godown"
+    "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED": "Admin users cannot be assigned to a jobwork godown",
+    "ITEM_GROUP_NOT_FOUND": "Item group not found",
+    "ITEM_GROUP_NAME_ALREADY_EXISTS": "Item group with this name already exists",
+    "ITEM_GROUP_CODE_ALREADY_EXISTS": "Item group code already exists",
+    "GODOWN_ACCESS_DENIED": "You do not have access to this godown based on your hierarchy level and region",
+    "GODOWN_INACTIVE": "Selected godown is inactive"
   }
 }

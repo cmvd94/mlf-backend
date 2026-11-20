@@ -2,6 +2,7 @@ import { ReqAdminDTO } from "../dto/admin/reqAdminDTO";
 import { GetGodownListQueryDTO } from "../dto/admin/godownDTO";
 import { AdminRole, SuperAdmin } from "../constants/adminRole";
 import { Godown } from "@/domain/entities/admin/Godown";
+import { generateObjectId } from "./generateObjectId";
 
 const handleLocationFilters = (
   dto: GetGodownListQueryDTO,
@@ -50,9 +51,9 @@ export const generateGodownQuery = (
     case AdminRole.ASSISTANT:
     case AdminRole.BILLING_USER:
       if (hasAccess) {
-        if (scope.pincode?.length) {
-          query.pincode = { $in: scope.pincode };
-        } else if (scope.district) {
+        const assignedGodowns = reqAdmin.godownId || [];
+        if (assignedGodowns.length > 0) {
+          query._id = { $in: assignedGodowns.map((id) => generateObjectId(id)) };
           query.country = scope.country;
           query.zone = scope.zone;
           query.state = scope.state;
@@ -126,18 +127,59 @@ export const compareAdminAndGodownLocation = (
   switch (admin.role) {
     case AdminRole.SUPERVISOR:
     case AdminRole.ASSISTANT:
-    case AdminRole.BILLING_USER:
-      if (godown.pincode && scope.pincode?.includes(godown.pincode)) {
-        return true;
+    case AdminRole.BILLING_USER: {
+      const godownIdStr = godown._id?.toString();
+      const inAdminGodowns = admin.godownId?.some(
+        (id) => id.toString() === godownIdStr
+      );
+      const isAssignedInGodown =
+        (Array.isArray(godown.supervisorId) &&
+          godown.supervisorId.some(
+            (s: any) => (s._id?.toString() || s.toString()) === admin.userId
+          )) ||
+        (Array.isArray(godown.assistantId) &&
+          godown.assistantId.some(
+            (a: any) => (a._id?.toString() || a.toString()) === admin.userId
+          )) ||
+        (godown.billingUserId &&
+          (godown.billingUserId._id?.toString() ||
+            godown.billingUserId.toString()) === admin.userId);
+
+      if (!inAdminGodowns && !isAssignedInGodown) {
+        return false;
       }
+
       return (
         scope.district === godown.district &&
         scope.state === godown.state &&
         scope.country === godown.country &&
         scope.zone === godown.zone
       );
+    }
 
-    case AdminRole.GODOWN_MANAGER:
+    case AdminRole.GODOWN_MANAGER: {
+      const isDistrictMatch =
+        scope.district === godown.district &&
+        scope.state === godown.state &&
+        scope.country === godown.country &&
+        scope.zone === godown.zone;
+      if (!isDistrictMatch) return false;
+
+      // If godown manager has specific assigned godowns, check assignment
+      if (admin.godownId && admin.godownId.length > 0) {
+        const godownIdStr = godown._id?.toString();
+        const inAdminGodowns = admin.godownId.some(
+          (id) => id.toString() === godownIdStr
+        );
+        const isGodownManager =
+          godown.godownManagerId &&
+          (godown.godownManagerId._id?.toString() ||
+            godown.godownManagerId.toString()) === admin.userId;
+        return inAdminGodowns || Boolean(isGodownManager);
+      }
+      return true;
+    }
+
     case AdminRole.DISTRICT_MANAGER:
       return (
         scope.district === godown.district &&
