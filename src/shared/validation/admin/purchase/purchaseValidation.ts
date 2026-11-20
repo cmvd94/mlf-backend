@@ -3,6 +3,7 @@ import { z } from "zod";
 export const PurchaseItemSchema = z.object({
   itemId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Item ID"),
   godownId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Godown ID"),
+  batchNo: z.string().trim().optional().default(""),
   uomId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid UOM ID"),
   uomQuantity: z.number().positive("UOM quantity must be greater than 0"),
   actualQuantity: z.number().positive("Actual quantity must be greater than 0"),
@@ -20,6 +21,7 @@ export const CreatePurchaseRouteSchema = z.object({
             {
               itemId: data.itemId,
               godownId: data.godownId,
+              batchNo: data.batchNo ?? "",
               uomId: data.uomId,
               uomQuantity: data.uomQuantity ?? data.actualQuantity ?? 1,
               actualQuantity: data.actualQuantity,

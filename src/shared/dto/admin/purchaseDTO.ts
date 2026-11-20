@@ -1,6 +1,7 @@
 export interface CreatePurchaseItemDTO {
   itemId: string;
   godownId: string;
+  batchNo?: string;
   uomId: string;
   uomQuantity: number;
   actualQuantity: number;
@@ -21,6 +22,7 @@ export interface CreatePurchaseDTO {
   // Optional legacy fields for backward compatibility
   godownId?: string;
   itemId?: string;
+  batchNo?: string;
   uomId?: string;
   uomQuantity?: number;
   actualQuantity?: number;
@@ -41,6 +43,7 @@ export interface UpdatePurchaseDTO {
   // Optional legacy fields for backward compatibility
   godownId?: string;
   itemId?: string;
+  batchNo?: string;
   uomId?: string;
   uomQuantity?: number;
   actualQuantity?: number;

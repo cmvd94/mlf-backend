@@ -159,6 +159,7 @@ export class UpdatePurchaseUseCase {
           calculatedItems.push({
             itemId: generateObjectId(itemDto.itemId) as any,
             godownId: generateObjectId(targetGodownId) as any,
+            batchNo: itemDto.batchNo?.trim() || "",
             uomId: generateObjectId(itemDto.uomId) as any,
             uomQuantity: uomQty,
             actualQuantity: actualQty,
@@ -255,6 +256,7 @@ export class UpdatePurchaseUseCase {
 
         // Update legacy mirror fields
         updateData.itemId = calculatedItems[0].itemId;
+        updateData.batchNo = calculatedItems[0].batchNo;
         updateData.uomId = calculatedItems[0].uomId;
         updateData.uomQuantity = calculatedItems[0].uomQuantity;
         updateData.actualQuantity = calculatedItems[0].actualQuantity;

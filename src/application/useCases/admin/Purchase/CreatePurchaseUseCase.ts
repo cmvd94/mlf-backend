@@ -131,6 +131,7 @@ export class CreatePurchaseUseCase {
         calculatedItems.push({
           itemId: generateObjectId(itemDto.itemId) as any,
           godownId: generateObjectId(targetGodownId) as any,
+          batchNo: itemDto.batchNo?.trim() || "",
           uomId: generateObjectId(itemDto.uomId) as any,
           uomQuantity: uomQty,
           actualQuantity: actualQty,
@@ -178,6 +179,7 @@ export class CreatePurchaseUseCase {
         totalBilledQuantity,
         // Legacy single item fields mirror for first item
         itemId: calculatedItems[0].itemId,
+        batchNo: calculatedItems[0].batchNo,
         uomId: calculatedItems[0].uomId,
         uomQuantity: calculatedItems[0].uomQuantity,
         actualQuantity: calculatedItems[0].actualQuantity,

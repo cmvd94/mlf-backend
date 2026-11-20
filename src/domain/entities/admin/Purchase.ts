@@ -21,6 +21,9 @@ export class PurchaseItem {
   @prop({ ref: () => "Godown", required: true })
   public godownId!: Ref<any>;
 
+  @prop({ type: String, trim: true, default: "" })
+  public batchNo!: string;
+
   @prop({ ref: () => UnitOfMeasurement, required: true })
   public uomId!: Ref<UnitOfMeasurement>;
 
@@ -104,6 +107,9 @@ export class Purchase {
   // Legacy single item fields for backward compatibility
   @prop({ ref: () => Item, required: false })
   public itemId?: Ref<Item>;
+
+  @prop({ type: String, trim: true, default: "" })
+  public batchNo?: string;
 
   @prop({ ref: () => UnitOfMeasurement, required: false })
   public uomId?: Ref<UnitOfMeasurement>;
