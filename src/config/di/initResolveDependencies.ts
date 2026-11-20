@@ -6,6 +6,7 @@ import { AdminStaticDataController } from "@/interfaces/controllers/admin/AdminS
 import { GodownController } from "@/interfaces/controllers/admin/GodownController";
 import { AccountInventoryController } from "@/interfaces/controllers/admin/AccountInventoryController";
 import { PurchaseController } from "@/interfaces/controllers/admin/PurchaseController";
+import { StockSummaryController } from "@/interfaces/controllers/admin/StockSummaryController";
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { CreateUserUseCase } from "@/application/useCases/admin/CRUDAdminUser/CreateUserUseCase";
 import { initLoggerDI } from "./initRegisterLoggerDI";
@@ -24,3 +25,4 @@ export const adminStaticDataController = container.resolve(AdminStaticDataContro
 export const godownController = container.resolve(GodownController);
 export const accountInventoryController = container.resolve(AccountInventoryController);
 export const purchaseController = container.resolve(PurchaseController);
+export const stockSummaryController = container.resolve(StockSummaryController);

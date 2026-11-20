@@ -13,6 +13,7 @@ import { CreatePurchaseDTO, CreatePurchaseItemDTO } from "@/shared/dto/admin/pur
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
 import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { FINANCIAL_CONFIG } from "@/shared/constants/financialConfig";
@@ -166,7 +167,7 @@ export class CreatePurchaseUseCase {
       // 5. Create Purchase entry with individual item godown assignments
       const purchaseId = await this.purchaseRepository.createPurchase({
         purchaseNumber,
-        date: new Date(dto.date),
+        date: parseVoucherDate(dto.date),
         partyId: generateObjectId(dto.partyId) as any,
         purchaseTypeId: generateObjectId(dto.purchaseTypeId) as any,
         items: calculatedItems,

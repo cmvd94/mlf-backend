@@ -40,6 +40,8 @@ export class GetPurchaseListUseCase {
               totalPages: 0,
               totalCount: 0,
               limit,
+              hasNextPage: false,
+              hasPrevPage: false,
             },
           };
         }
@@ -58,6 +60,8 @@ export class GetPurchaseListUseCase {
                 totalPages: 0,
                 totalCount: 0,
                 limit,
+                hasNextPage: false,
+                hasPrevPage: false,
               },
             };
           }
@@ -114,9 +118,11 @@ export class GetPurchaseListUseCase {
       }
 
       const totalCount = await this.purchaseRepository.countPurchases(query);
-      const totalPages = Math.ceil(totalCount / limit) || 1;
-      const validPage = Math.min(page, totalPages);
-      const purchases = await this.purchaseRepository.getPurchaseList(query, validPage, limit);
+      const totalPages = Math.ceil(totalCount / limit) || (totalCount === 0 ? 0 : 1);
+      const validPage = totalCount === 0 ? 1 : Math.max(1, Math.min(page, totalPages));
+      const purchases = totalCount === 0
+        ? []
+        : await this.purchaseRepository.getPurchaseList(query, validPage, limit);
 
       const normalizedPurchases = purchases.map((p: any) => {
         if ((!p.items || p.items.length === 0) && p.itemId) {
@@ -144,6 +150,8 @@ export class GetPurchaseListUseCase {
           totalPages,
           totalCount,
           limit,
+          hasNextPage: totalCount > 0 && validPage < totalPages,
+          hasPrevPage: totalCount > 0 && validPage > 1,
         },
       };
     } catch (error) {

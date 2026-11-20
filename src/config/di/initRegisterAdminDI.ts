@@ -75,6 +75,9 @@ import {
 } from "@/application/useCases/admin/Purchase/PurchaseDetailsUseCases";
 import { AccountInventoryController } from "@/interfaces/controllers/admin/AccountInventoryController";
 import { PurchaseController } from "@/interfaces/controllers/admin/PurchaseController";
+import { StockSummaryRepository } from "@/infrastructure/repositories/admin/StockSummaryRepository";
+import { GetStockSummaryUseCase } from "@/application/useCases/admin/Inventory/GetStockSummaryUseCase";
+import { StockSummaryController } from "@/interfaces/controllers/admin/StockSummaryController";
 
 export const initAdminDI = () => {
   container.registerSingleton(AdminRepository, AdminRepository);
@@ -88,6 +91,7 @@ export const initAdminDI = () => {
   container.registerSingleton(ItemRepository, ItemRepository);
   container.registerSingleton(PurchaseRepository, PurchaseRepository);
   container.registerSingleton(GodownStockRepository, GodownStockRepository);
+  container.registerSingleton(StockSummaryRepository, StockSummaryRepository);
 
   container.registerSingleton(CreateUserUseCase, CreateUserUseCase);
   container.registerSingleton(UpdateUserUseCase, UpdateUserUseCase);
@@ -143,10 +147,12 @@ export const initAdminDI = () => {
   container.registerSingleton(GetPurchaseListUseCase, GetPurchaseListUseCase);
   container.registerSingleton(GetPurchaseByIdUseCase, GetPurchaseByIdUseCase);
   container.registerSingleton(DeletePurchaseUseCase, DeletePurchaseUseCase);
+  container.registerSingleton(GetStockSummaryUseCase, GetStockSummaryUseCase);
 
   container.registerSingleton(CRUDAdminUserController, CRUDAdminUserController);
   container.registerSingleton(AdminStaticDataController, AdminStaticDataController);
   container.registerSingleton(GodownController, GodownController);
   container.registerSingleton(AccountInventoryController, AccountInventoryController);
   container.registerSingleton(PurchaseController, PurchaseController);
+  container.registerSingleton(StockSummaryController, StockSummaryController);
 };

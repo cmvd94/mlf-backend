@@ -12,6 +12,7 @@ import { UpdatePurchaseDTO } from "@/shared/dto/admin/purchaseDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
 import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { FINANCIAL_CONFIG } from "@/shared/constants/financialConfig";
@@ -89,7 +90,7 @@ export class UpdatePurchaseUseCase {
       }
 
       if (dto.date) {
-        updateData.date = new Date(dto.date);
+        updateData.date = parseVoucherDate(dto.date);
       }
 
       if (dto.notes !== undefined) {
