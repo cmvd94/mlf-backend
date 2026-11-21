@@ -53,6 +53,9 @@ export class GodownStock {
   @prop({ required: false, default: 0 })
   public initialStock?: number;
 
+  @prop({ required: false, default: 0 })
+  public rate?: number;
+
   @prop({ ref: () => UnitOfMeasurement, required: false })
   public uomId?: Ref<UnitOfMeasurement>;
 

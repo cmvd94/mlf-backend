@@ -439,6 +439,7 @@ export class UpdatePurchaseUseCase {
                   batchNo: newIt.batchNo,
                   currentStock: newIt.actualQuantity,
                   initialStock: newIt.actualQuantity,
+                  rate: newIt.rate,
                   uomId: newIt.uomId,
                   uomQuantity: newIt.uomQuantity,
                   perId: newIt.perId,

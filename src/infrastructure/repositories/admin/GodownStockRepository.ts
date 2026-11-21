@@ -144,6 +144,8 @@ export class GodownStockRepository {
       .populate("itemId", "name itemCode defaultUomId defaultPerId standardRate")
       .populate("uomId", "name symbol")
       .populate("perId", "name symbol multiplier")
+      .populate("purchaseId", "items")
+      .populate("stockTransferId", "sourceItems destinationItems")
       .lean();
   }
 
@@ -246,6 +248,8 @@ export class GodownStockRepository {
       .populate("itemId", "name itemCode itemGroupId defaultUomId defaultPerId")
       .populate("uomId", "name symbol")
       .populate("perId", "name symbol multiplier")
+      .populate("purchaseId", "items")
+      .populate("stockTransferId", "sourceItems destinationItems")
       .sort({ updatedAt: -1 })
       .lean();
   }

@@ -118,6 +118,8 @@ export class GetStockSummaryUseCase {
         rate: number;
       }>>();
 
+      const batchRateMap = new Map<string, number>();
+
       for (const pb of purchaseBatches) {
         if (!itemBatchLinesMap.has(pb.itemId)) {
           itemBatchLinesMap.set(pb.itemId, new Map());
@@ -137,12 +139,19 @@ export class GetStockSummaryUseCase {
             rate: pb.rate,
           });
         }
+
+        if (pb.batchNo) {
+          batchRateMap.set(`${pb.itemId}_${pb.batchNo}`, pb.rate);
+          batchRateMap.set(pb.batchNo, pb.rate);
+        }
       }
+
+      const showZero = Boolean(dto.showZeroStock);
 
       // Reconcile items with live GodownStock documents (incorporating batch transfers & current balances)
       for (const gs of godownStocks) {
-        const iId = gs.itemId.toString();
-        const gId = gs.godownId.toString();
+        const iId = (gs.itemId?._id || gs.itemId).toString();
+        const gId = (gs.godownId?._id || gs.godownId).toString();
         const itemDoc = itemMap.get(iId);
         if (!itemDoc) continue;
 
@@ -154,18 +163,60 @@ export class GetStockSummaryUseCase {
         const bNo = (gs.batchNo || "").trim();
         const batchKey = `${gId}_${bNo}`;
 
-        if (gs.currentStock > 0) {
-          const rate = (gs as any).rate && (gs as any).rate > 0 ? (gs as any).rate : (itemDoc.standardRate || 0);
-          const qty = Number(gs.currentStock);
-          const val = Number((qty * rate).toFixed(2));
+        // Determine unit rate for this batch
+        let rate = Number((gs as any).rate) || 0;
+        if (rate <= 0) {
+          rate = batchRateMap.get(`${iId}_${bNo}`) || batchRateMap.get(bNo) || 0;
+        }
+        if (rate <= 0 && (gs as any).stockTransferId) {
+          const transfer = (gs as any).stockTransferId;
+          if (transfer.destinationItems) {
+            const dItem = transfer.destinationItems.find((it: any) =>
+              (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === iId)
+            );
+            if (dItem && Number(dItem.rate) > 0) rate = Number(dItem.rate);
+          }
+          if (rate <= 0 && transfer.sourceItems && transfer.sourceItems.length > 0) {
+            for (const sItem of transfer.sourceItems) {
+              const sBatch = (sItem.batchNo || "").trim();
+              const sRate = batchRateMap.get(sBatch) || Number(sItem.rate) || 0;
+              if (sRate > 0) {
+                rate = sRate;
+                break;
+              }
+            }
+          }
+        }
+        if (rate <= 0 && (gs as any).purchaseId?.items) {
+          const pItem = (gs as any).purchaseId.items.find((it: any) =>
+            (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === iId)
+          );
+          if (pItem) rate = Number(pItem.rate) || 0;
+        }
+        if (rate <= 0) {
+          rate = itemDoc.standardRate || 0;
+        }
+
+        const currentStock = Number(gs.currentStock) || 0;
+
+        if (currentStock > 0) {
+          const val = Number((currentStock * rate).toFixed(2));
           batchesForThisItem.set(batchKey, {
             batchNo: bNo,
             godownId: gId,
-            quantity: qty,
+            quantity: currentStock,
             value: val,
             rate: rate,
           });
-        } else if (batchesForThisItem.has(batchKey)) {
+        } else if (showZero) {
+          batchesForThisItem.set(batchKey, {
+            batchNo: bNo,
+            godownId: gId,
+            quantity: 0,
+            value: 0,
+            rate: rate,
+          });
+        } else {
           batchesForThisItem.delete(batchKey);
         }
       }
@@ -180,8 +231,6 @@ export class GetStockSummaryUseCase {
         totalValue: number;
         uom: string;
       }>();
-
-      const showZero = Boolean(dto.showZeroStock);
 
       for (const item of allItems) {
         const iId = item._id.toString();

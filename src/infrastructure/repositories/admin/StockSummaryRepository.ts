@@ -137,7 +137,6 @@ export class StockSummaryRepository {
         { godownId: { $in: allGodownIdVariants } },
         { companyGodownId: { $in: allGodownIdVariants } },
       ],
-      currentStock: { $gt: 0 },
       isDeleted: false,
     };
 
@@ -145,7 +144,11 @@ export class StockSummaryRepository {
       query.itemId = { $in: itemIds.map((id) => generateObjectId(id)) };
     }
 
-    return await GodownStockModel.find(query).lean().exec();
+    return await GodownStockModel.find(query)
+      .populate("stockTransferId", "sourceItems destinationItems")
+      .populate("purchaseId", "items")
+      .lean()
+      .exec();
   }
 
   /**

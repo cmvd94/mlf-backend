@@ -208,6 +208,7 @@ export class CreatePurchaseUseCase {
               batchNo: calculatedItem.batchNo,
               currentStock: calculatedItem.actualQuantity,
               initialStock: calculatedItem.actualQuantity,
+              rate: calculatedItem.rate,
               uomId: calculatedItem.uomId,
               uomQuantity: calculatedItem.uomQuantity,
               perId: calculatedItem.perId,

@@ -70,28 +70,59 @@ export class GetAvailableStockForTransferUseCase {
       );
       const authorizedStocks = stocks.filter((_, idx) => stockAccessChecks[idx]);
 
-      return authorizedStocks.map((s: any) => ({
-        godownStockId: s._id.toString(),
-        godownId: s.godownId?._id?.toString() || s.godownId?.toString(),
-        godownName: s.godownId?.name || "Unknown Godown",
-        godownCode: s.godownId?.code || s.godownId?.godownId || "",
-        companyGodownId: s.companyGodownId?._id?.toString() || s.companyGodownId?.toString() || "",
-        companyGodownName: s.companyGodownId?.name || "",
-        companyGodownCode: s.companyGodownId?.godownId || "",
-        itemId: s.itemId?._id?.toString() || s.itemId?.toString(),
-        itemName: s.itemId?.name || "Unknown Item",
-        itemCode: s.itemId?.itemCode || "",
-        batchNo: s.batchNo || "",
-        currentStock: s.currentStock || 0,
-        rate: s.rate || 0,
-        amount: s.amount || 0,
-        uomId: s.uomId?._id?.toString() || s.uomId?.toString() || "",
-        uomName: s.uomId?.name || "",
-        uomSymbol: s.uomId?.symbol || "",
-        uomQuantity: s.uomQuantity || 1,
-        perId: s.perId?._id?.toString() || s.perId?.toString() || "",
-        perMultiplier: s.perId?.multiplier || 1,
-      }));
+      return authorizedStocks.map((s: any) => {
+        let rate = Number(s.rate) || 0;
+        const bNo = (s.batchNo || "").trim();
+        const itId = s.itemId?._id?.toString() || s.itemId?.toString() || "";
+
+        if (rate <= 0 && s.purchaseId?.items) {
+          const pItem = s.purchaseId.items.find((it: any) =>
+            (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === itId)
+          );
+          if (pItem) rate = Number(pItem.rate) || 0;
+        }
+
+        if (rate <= 0 && s.stockTransferId?.destinationItems) {
+          const dItem = s.stockTransferId.destinationItems.find((it: any) =>
+            (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === itId)
+          );
+          if (dItem && Number(dItem.rate) > 0) {
+            rate = Number(dItem.rate);
+          } else if (s.stockTransferId?.sourceItems && s.stockTransferId.sourceItems.length > 0) {
+            rate = Number(s.stockTransferId.sourceItems[0].rate) || 0;
+          }
+        }
+
+        if (rate <= 0 && s.itemId?.standardRate) {
+          rate = Number(s.itemId.standardRate) || 0;
+        }
+
+        const qty = Number(s.currentStock) || 0;
+        const amount = Number((qty * rate).toFixed(2));
+
+        return {
+          godownStockId: s._id.toString(),
+          godownId: s.godownId?._id?.toString() || s.godownId?.toString(),
+          godownName: s.godownId?.name || "Unknown Godown",
+          godownCode: s.godownId?.code || s.godownId?.godownId || "",
+          companyGodownId: s.companyGodownId?._id?.toString() || s.companyGodownId?.toString() || "",
+          companyGodownName: s.companyGodownId?.name || "",
+          companyGodownCode: s.companyGodownId?.godownId || "",
+          itemId: itId,
+          itemName: s.itemId?.name || "Unknown Item",
+          itemCode: s.itemId?.itemCode || "",
+          batchNo: bNo,
+          currentStock: qty,
+          rate,
+          amount,
+          uomId: s.uomId?._id?.toString() || s.uomId?.toString() || "",
+          uomName: s.uomId?.name || "",
+          uomSymbol: s.uomId?.symbol || "",
+          uomQuantity: s.uomQuantity || 1,
+          perId: s.perId?._id?.toString() || s.perId?.toString() || "",
+          perMultiplier: s.perId?.multiplier || 1,
+        };
+      });
     } catch (error) {
       ErrorHandler.handleError(error, AdminErrorStage.StockTransferUseCase, this.logger);
     }

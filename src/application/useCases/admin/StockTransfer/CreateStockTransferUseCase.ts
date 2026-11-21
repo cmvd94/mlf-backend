@@ -104,6 +104,19 @@ export class CreateStockTransferUseCase {
         const sourceUomId = rawSourceUom ? ((rawSourceUom as any)._id || rawSourceUom).toString() : undefined;
         const sourceUomQty = src.uomQuantity !== undefined ? Number(src.uomQuantity) : (stockDoc.uomQuantity || 1);
 
+        // Resolve rate from input, stock batch, purchase, or item standard rate
+        let sourceRate = Number(src.rate) || Number(stockDoc.rate) || 0;
+        if (sourceRate <= 0 && stockDoc.purchaseId?.items) {
+          const pItem = stockDoc.purchaseId.items.find((it: any) =>
+            (it.batchNo && it.batchNo.trim() === (stockDoc.batchNo || "").trim()) ||
+            (it.itemId && it.itemId.toString() === sourceItemId)
+          );
+          if (pItem) sourceRate = Number(pItem.rate) || 0;
+        }
+        if (sourceRate <= 0 && stockDoc.itemId?.standardRate) {
+          sourceRate = Number(stockDoc.itemId.standardRate) || 0;
+        }
+
         preparedSourceItems.push({
           stockDocId: stockDoc._id,
           sourceItemId,
@@ -113,6 +126,7 @@ export class CreateStockTransferUseCase {
           requestedQty,
           uomId: sourceUomId,
           uomQuantity: sourceUomQty,
+          rate: sourceRate,
         });
       }
 
@@ -159,6 +173,11 @@ export class CreateStockTransferUseCase {
           throw new HttpException(400, "Destination Batch / Lot number is required", ERROR_CODES.VALIDATION_ERROR);
         }
 
+        let destRate = Number(dest.rate) || 0;
+        if (destRate <= 0) {
+          destRate = preparedSourceItems[0]?.rate || Number(destItem.standardRate) || 0;
+        }
+
         preparedDestItems.push({
           destGodownId: destGodown._id,
           destItemId: destItem._id,
@@ -166,6 +185,7 @@ export class CreateStockTransferUseCase {
           destQty,
           uomId,
           uomQuantity,
+          rate: destRate,
         });
       }
 
@@ -200,6 +220,8 @@ export class CreateStockTransferUseCase {
             companyGodownId: generateObjectId(src.companyGodownId),
             batchNo: src.batchNo,
             quantity: src.requestedQty,
+            rate: src.rate,
+            amount: Number((src.requestedQty * src.rate).toFixed(2)),
             uomId: src.uomId ? generateObjectId(src.uomId) : undefined,
             uomQuantity: src.uomQuantity,
           });
@@ -221,6 +243,7 @@ export class CreateStockTransferUseCase {
               batchNo: dest.batchNo,
               currentStock: dest.destQty,
               initialStock: dest.destQty,
+              rate: dest.rate,
               uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
               uomQuantity: dest.uomQuantity,
               stockTransferId: transferObjectId,
@@ -240,6 +263,8 @@ export class CreateStockTransferUseCase {
             companyGodownId: destCompanyGodownId,
             batchNo: dest.batchNo,
             quantity: dest.destQty,
+            rate: dest.rate,
+            amount: Number((dest.destQty * dest.rate).toFixed(2)),
             uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
             uomQuantity: dest.uomQuantity,
             destinationGodownStockId: createdBatchDoc._id,
@@ -250,6 +275,9 @@ export class CreateStockTransferUseCase {
         const seq = await this.counterRepository.getNextSequence("STOCK_TRANSFER_NUMBER", this.logger, session);
         const transferNumber = `ST_${seq.toString().padStart(4, "0")}`;
 
+        const totalSourceAmount = calculatedSourceItems.reduce((acc, it) => acc + (it.amount || 0), 0);
+        const totalDestinationAmount = calculatedDestinationItems.reduce((acc, it) => acc + (it.amount || 0), 0);
+
         // Create StockTransfer voucher
         await this.stockTransferRepository.createStockTransfer(
           {
@@ -259,9 +287,9 @@ export class CreateStockTransferUseCase {
             sourceItems: calculatedSourceItems,
             destinationItems: calculatedDestinationItems,
             totalSourceQuantity,
-            totalSourceAmount: 0,
+            totalSourceAmount,
             totalDestinationQuantity,
-            totalDestinationAmount: 0,
+            totalDestinationAmount,
             narration: dto.narration?.trim() || "",
             isActive: true,
             createdBy: generateObjectId(reqAdmin.userId) as any,
