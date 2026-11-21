@@ -6,7 +6,7 @@ import {
   AdminRoleGuard,
 } from "@/application/decorators/adminDefineMetadata";
 import { BasePath } from "@/application/decorators/basePath";
-import { Get, Post } from "@/application/decorators/HttpMethods";
+import { Get, Post, Put, Patch, Delete } from "@/application/decorators/HttpMethods";
 import {
   Body,
   Params,
@@ -25,17 +25,22 @@ import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 
 import {
   CreateStockTransferRouteSchema,
+  UpdateStockTransferRouteSchema,
+  DeleteStockTransferRouteSchema,
   GetStockTransferListRouteSchema,
   GetAvailableStockRouteSchema,
 } from "@/shared/validation/admin/stockTransfer/stockTransferValidation";
 
 import { CreateStockTransferUseCase } from "@/application/useCases/admin/StockTransfer/CreateStockTransferUseCase";
+import { UpdateStockTransferUseCase } from "@/application/useCases/admin/StockTransfer/UpdateStockTransferUseCase";
+import { DeleteStockTransferUseCase } from "@/application/useCases/admin/StockTransfer/DeleteStockTransferUseCase";
 import { GetStockTransferListUseCase } from "@/application/useCases/admin/StockTransfer/GetStockTransferListUseCase";
 import { GetStockTransferByIdUseCase } from "@/application/useCases/admin/StockTransfer/GetStockTransferByIdUseCase";
 import { GetAvailableStockForTransferUseCase } from "@/application/useCases/admin/StockTransfer/GetAvailableStockForTransferUseCase";
 
 import {
   CreateStockTransferDTO,
+  UpdateStockTransferDTO,
   GetStockTransferListQueryDTO,
   GetAvailableStockQueryDTO,
 } from "@/shared/dto/admin/stockTransferDTO";
@@ -45,6 +50,8 @@ import {
 export class StockTransferController {
   constructor(
     @inject(CreateStockTransferUseCase) private createStockTransferUseCase: CreateStockTransferUseCase,
+    @inject(UpdateStockTransferUseCase) private updateStockTransferUseCase: UpdateStockTransferUseCase,
+    @inject(DeleteStockTransferUseCase) private deleteStockTransferUseCase: DeleteStockTransferUseCase,
     @inject(GetStockTransferListUseCase) private getStockTransferListUseCase: GetStockTransferListUseCase,
     @inject(GetStockTransferByIdUseCase) private getStockTransferByIdUseCase: GetStockTransferByIdUseCase,
     @inject(GetAvailableStockForTransferUseCase) private getAvailableStockForTransferUseCase: GetAvailableStockForTransferUseCase,
@@ -121,6 +128,84 @@ export class StockTransferController {
     try {
       const result = await this.getStockTransferByIdUseCase.execute(params.id, reqAdmin);
       res.status(200).json(sendResponse(req, "STOCK_TRANSFER.FETCHED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.StockTransferController, this.logger);
+    }
+  }
+
+  @Put("/:id")
+  @ValidateSchema(UpdateStockTransferRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async updateStockTransfer(
+    @Params() params: { id: string },
+    @Body() body: UpdateStockTransferDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.updateStockTransferUseCase.execute(params.id, body, reqAdmin);
+      res.status(200).json(sendResponse(req, "STOCK_TRANSFER.UPDATED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.StockTransferController, this.logger);
+    }
+  }
+
+  @Patch("/update/:id")
+  @ValidateSchema(UpdateStockTransferRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async patchStockTransfer(
+    @Params() params: { id: string },
+    @Body() body: UpdateStockTransferDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.updateStockTransferUseCase.execute(params.id, body, reqAdmin);
+      res.status(200).json(sendResponse(req, "STOCK_TRANSFER.UPDATED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.StockTransferController, this.logger);
+    }
+  }
+
+  @Delete("/:id")
+  @ValidateSchema(DeleteStockTransferRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async deleteStockTransfer(
+    @Params() params: { id: string },
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.deleteStockTransferUseCase.execute(params.id, reqAdmin);
+      res.status(200).json(sendResponse(req, "STOCK_TRANSFER.DELETED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.StockTransferController, this.logger);
+    }
+  }
+
+  @Delete("/delete/:id")
+  @ValidateSchema(DeleteStockTransferRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async deleteStockTransferAlias(
+    @Params() params: { id: string },
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.deleteStockTransferUseCase.execute(params.id, reqAdmin);
+      res.status(200).json(sendResponse(req, "STOCK_TRANSFER.DELETED", this.logger, result));
     } catch (error) {
       sendErrorResponse(req, res, next, error, AdminErrorStage.StockTransferController, this.logger);
     }

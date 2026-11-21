@@ -4,6 +4,7 @@ import { StockTransferRepository } from "@/infrastructure/repositories/admin/Sto
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
 import { GetStockTransferListQueryDTO } from "@/shared/dto/admin/stockTransferDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
+import { SuperAdmin } from "@/shared/constants/adminRole";
 import { generateGodownQuery, compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
@@ -56,14 +57,18 @@ export class GetStockTransferListUseCase {
 
         const godownObjectId = generateObjectId(dto.godownId.trim());
         filterQuery.$or = [
+          { "sourceItems.companyGodownId": godownObjectId },
           { "sourceItems.godownId": godownObjectId },
+          { "destinationItems.companyGodownId": godownObjectId },
           { "destinationItems.godownId": godownObjectId },
         ];
-      } else {
+      } else if (reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
         // Must involve at least one accessible godown
         const accessibleObjectIds = accessibleGodownIds.map((id) => generateObjectId(id));
         filterQuery.$or = [
+          { "sourceItems.companyGodownId": { $in: accessibleObjectIds } },
           { "sourceItems.godownId": { $in: accessibleObjectIds } },
+          { "destinationItems.companyGodownId": { $in: accessibleObjectIds } },
           { "destinationItems.godownId": { $in: accessibleObjectIds } },
         ];
       }

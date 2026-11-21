@@ -25,8 +25,8 @@ export class GetStockTransferByIdUseCase {
       // Verify access to at least one godown involved in the transfer
       let hasAccess = false;
       const allGodowns = [
-        ...(transfer.sourceItems || []).map((it: any) => it.godownId),
-        ...(transfer.destinationItems || []).map((it: any) => it.godownId),
+        ...(transfer.sourceItems || []).flatMap((it: any) => [it.companyGodownId, it.godownId]),
+        ...(transfer.destinationItems || []).flatMap((it: any) => [it.companyGodownId, it.godownId]),
       ].filter(Boolean);
 
       for (const g of allGodowns) {

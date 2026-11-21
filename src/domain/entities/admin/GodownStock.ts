@@ -12,12 +12,20 @@ import { UnitOfMeasurement } from "./UnitOfMeasurement";
 import { PerUnit } from "./PerUnit";
 import { Types } from "mongoose";
 
+export enum StockSourceType {
+  PURCHASE = "PURCHASE",
+  TRANSFER = "TRANSFER",
+  MANUAL = "MANUAL",
+}
+
 @modelOptions({
   schemaOptions: {
     timestamps: true,
     autoIndex: process.env.NODE_ENV !== Environment.PRODUCTION,
   },
 })
+@index({ companyGodownId: 1 })
+@index({ companyGodownId: 1, itemId: 1 })
 @index({ godownId: 1, itemId: 1 })
 @index({ godownId: 1, itemId: 1, batchNo: 1 })
 @index({ godownId: 1, currentStock: 1 })
@@ -29,6 +37,9 @@ export class GodownStock {
 
   @prop({ ref: () => "Godown", required: true })
   public godownId!: Ref<any>;
+
+  @prop({ ref: () => "Godown", required: true })
+  public companyGodownId!: Ref<any>;
 
   @prop({ ref: () => Item, required: true })
   public itemId!: Ref<Item>;
@@ -60,8 +71,8 @@ export class GodownStock {
   @prop({ ref: () => "StockTransfer", required: false })
   public stockTransferId?: Ref<any>;
 
-  @prop({ type: String, trim: true, default: "PURCHASE" })
-  public sourceType!: string; // PURCHASE | TRANSFER | MANUAL
+  @prop({ type: String, enum: Object.values(StockSourceType), default: StockSourceType.PURCHASE })
+  public sourceType!: StockSourceType;
 
   @prop({ default: true })
   public isActive!: boolean;

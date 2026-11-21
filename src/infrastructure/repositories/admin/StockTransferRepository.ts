@@ -44,10 +44,12 @@ export class StockTransferRepository {
     return await StockTransferModel.findOne({ _id: objectId, isDeleted: false })
       .populate("sourceItems.itemId", "name itemCode itemGroupId defaultUomId defaultPerId")
       .populate("sourceItems.godownId", "godownId name type country zone state district pincode")
+      .populate("sourceItems.companyGodownId", "godownId name type country zone state district pincode")
       .populate("sourceItems.uomId", "name symbol")
       .populate("sourceItems.perId", "name symbol multiplier")
       .populate("destinationItems.itemId", "name itemCode itemGroupId defaultUomId defaultPerId")
       .populate("destinationItems.godownId", "godownId name type country zone state district pincode")
+      .populate("destinationItems.companyGodownId", "godownId name type country zone state district pincode")
       .populate("destinationItems.uomId", "name symbol")
       .populate("destinationItems.perId", "name symbol multiplier")
       .populate("createdBy", "name phoneNumber")
@@ -62,9 +64,11 @@ export class StockTransferRepository {
       StockTransferModel.find(finalQuery)
         .populate("sourceItems.itemId", "name itemCode")
         .populate("sourceItems.godownId", "godownId name type")
+        .populate("sourceItems.companyGodownId", "godownId name type")
         .populate("sourceItems.uomId", "name symbol")
         .populate("destinationItems.itemId", "name itemCode")
         .populate("destinationItems.godownId", "godownId name type")
+        .populate("destinationItems.companyGodownId", "godownId name type")
         .populate("destinationItems.uomId", "name symbol")
         .populate("createdBy", "name")
         .sort({ date: -1, createdAt: -1 })
@@ -84,6 +88,27 @@ export class StockTransferRepository {
 
   async countStockTransfers(query: any = {}): Promise<number> {
     return await StockTransferModel.countDocuments({ ...query, isDeleted: false });
+  }
+
+  async updateStockTransfer(
+    id: string | Types.ObjectId,
+    data: any,
+    session?: ClientSession
+  ) {
+    const objectId = typeof id === "string" ? generateObjectId(id) : id;
+    const updated = await StockTransferModel.findOneAndUpdate(
+      { _id: objectId, isDeleted: false },
+      { $set: data },
+      { new: true, session }
+    );
+    if (!updated) {
+      throw new HttpException(
+        404,
+        "Stock transfer not found",
+        ERROR_CODES.NOT_FOUND
+      );
+    }
+    return updated;
   }
 
   async deleteStockTransfer(

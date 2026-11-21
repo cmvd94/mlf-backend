@@ -11,13 +11,15 @@ import { GodownStockRepository } from "@/infrastructure/repositories/admin/Godow
 import { UpdatePurchaseDTO } from "@/shared/dto/admin/purchaseDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
-import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { compareAdminAndGodownLocation, validateStockModificationAccess, validateStockModificationAccessWithFetch } from "@/shared/utils/godownQueryHelper";
 import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { FINANCIAL_CONFIG } from "@/shared/constants/financialConfig";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession } from "mongoose";
+import { GodownType } from "@/domain/entities/admin/Godown";
+import { StockSourceType } from "@/domain/entities/admin/GodownStock";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessages";
 
@@ -43,7 +45,23 @@ export class UpdatePurchaseUseCase {
         throw new HttpException(404, ERROR_MESSAGES.PURCHASE_NOT_FOUND, ERROR_CODES.PURCHASE_NOT_FOUND);
       }
 
-      // 2. Validate admin hierarchy access for existing purchase's godowns
+      // 2. Validate admin hierarchy access and stock modification access for existing purchase's company godown
+      const currentCompanyGodown = existingPurchase.companyGodownId || existingPurchase.godownId;
+      if (currentCompanyGodown) {
+        const hasCompanyAccess = await validateStockModificationAccessWithFetch(
+          reqAdmin,
+          currentCompanyGodown,
+          this.godownRepository
+        );
+        if (!hasCompanyAccess) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
+            ERROR_CODES.GODOWN_ACCESS_DENIED
+          );
+        }
+      }
+
       if (existingPurchase.items && existingPurchase.items.length > 0) {
         for (const it of existingPurchase.items) {
           const itGodown = it.godownId;
@@ -73,6 +91,30 @@ export class UpdatePurchaseUseCase {
         updatedBy: generateObjectId(reqAdmin.userId),
       };
 
+      // Verify company godown if updated
+      if (dto.companyGodownId) {
+        const newCompanyGodown = await this.godownRepository.findGodownById(dto.companyGodownId);
+        if (!newCompanyGodown || newCompanyGodown.isDeleted) {
+          throw new HttpException(404, ERROR_MESSAGES.GODOWN_NOT_FOUND, ERROR_CODES.GODOWN_NOT_FOUND);
+        }
+        if (!newCompanyGodown.isActive) {
+          throw new HttpException(400, ERROR_MESSAGES.GODOWN_INACTIVE, ERROR_CODES.GODOWN_INACTIVE);
+        }
+        if (newCompanyGodown.type !== GodownType.COMPANY_GODOWN) {
+          throw new HttpException(400, ERROR_MESSAGES.COMPANY_GODOWN_INVALID, ERROR_CODES.COMPANY_GODOWN_INVALID);
+        }
+        const hasNewCompanyAccess = validateStockModificationAccess(reqAdmin, newCompanyGodown);
+        if (!hasNewCompanyAccess) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
+            ERROR_CODES.GODOWN_ACCESS_DENIED
+          );
+        }
+        updateData.companyGodownId = generateObjectId(dto.companyGodownId);
+        updateData.godownId = generateObjectId(dto.companyGodownId);
+      }
+
       // 3. Verify party if updated
       if (dto.partyId) {
         const party = await this.partyRepository.getPartyById(dto.partyId);
@@ -98,6 +140,8 @@ export class UpdatePurchaseUseCase {
       if (dto.notes !== undefined) {
         updateData.notes = dto.notes.trim();
       }
+
+      const effectiveCompanyGodownId = updateData.companyGodownId || (existingPurchase.companyGodownId?._id || existingPurchase.companyGodownId || existingPurchase.godownId?._id || existingPurchase.godownId);
 
       // 5. If items are being updated, reconcile stock and calculate amounts
       if (dto.items && Array.isArray(dto.items) && dto.items.length > 0) {
@@ -162,6 +206,7 @@ export class UpdatePurchaseUseCase {
           calculatedItems.push({
             itemId: generateObjectId(itemDto.itemId) as any,
             godownId: generateObjectId(targetGodownId) as any,
+            companyGodownId: effectiveCompanyGodownId,
             batchNo: itemDto.batchNo?.trim() || "",
             uomId: generateObjectId(itemDto.uomId) as any,
             uomQuantity: uomQty,
@@ -371,6 +416,7 @@ export class UpdatePurchaseUseCase {
                 matchedStockDoc._id,
                 {
                   godownId: newIt.godownId,
+                  companyGodownId: effectiveCompanyGodownId,
                   itemId: newIt.itemId,
                   batchNo: newIt.batchNo,
                   currentStock: Number(matchedStockDoc.currentStock + qtyDelta),
@@ -388,6 +434,7 @@ export class UpdatePurchaseUseCase {
               const stockDoc = await this.godownStockRepository.createBatchStock(
                 {
                   godownId: newIt.godownId,
+                  companyGodownId: effectiveCompanyGodownId,
                   itemId: newIt.itemId,
                   batchNo: newIt.batchNo,
                   currentStock: newIt.actualQuantity,
@@ -396,7 +443,7 @@ export class UpdatePurchaseUseCase {
                   uomQuantity: newIt.uomQuantity,
                   perId: newIt.perId,
                   purchaseId: existingPurchase._id,
-                  sourceType: "PURCHASE",
+                  sourceType: StockSourceType.PURCHASE,
                   createdBy: reqAdmin.userId,
                   updatedBy: reqAdmin.userId,
                 },

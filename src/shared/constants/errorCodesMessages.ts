@@ -85,6 +85,9 @@ export const ERROR_CODES = {
   JOBWORK_GODOWN_ADMIN_NOT_ALLOWED: "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED",
   GODOWN_ACCESS_DENIED: "GODOWN_ACCESS_DENIED",
   GODOWN_INACTIVE: "GODOWN_INACTIVE",
+  COMPANY_GODOWN_REQUIRED: "COMPANY_GODOWN_REQUIRED",
+  COMPANY_GODOWN_INVALID: "COMPANY_GODOWN_INVALID",
+  STOCK_MODIFICATION_DENIED: "STOCK_MODIFICATION_DENIED",
 
   // Inventory & Masters Specific
   PARTY_NOT_FOUND: "PARTY_NOT_FOUND",
@@ -202,6 +205,9 @@ export const ERROR_MESSAGES = {
   JOBWORK_GODOWN_ADMIN_NOT_ALLOWED: "Admin users cannot be assigned to a jobwork godown",
   GODOWN_ACCESS_DENIED: "You do not have access to this godown based on your hierarchy level and region",
   GODOWN_INACTIVE: "Selected godown is inactive",
+  COMPANY_GODOWN_REQUIRED: "Company godown is mandatory for purchase",
+  COMPANY_GODOWN_INVALID: "Selected godown must be an active company godown",
+  STOCK_MODIFICATION_DENIED: "You do not have permission to modify stock for this company godown based on your hierarchy level and region",
 
   // Inventory & Masters Specific
   PARTY_NOT_FOUND: "Party not found",

@@ -3,7 +3,8 @@ import { Logger } from "winston";
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
 import { GodownStockRepository } from "@/infrastructure/repositories/admin/GodownStockRepository";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
-import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { SuperAdmin } from "@/shared/constants/adminRole";
+import { compareAdminAndGodownLocation, validateStockModificationAccessWithFetch } from "@/shared/utils/godownQueryHelper";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import HttpException from "@/shared/exceptions/HttpException";
@@ -34,7 +35,21 @@ export class GetGodownStockUseCase {
       }
 
       const stocks = await this.godownStockRepository.getStocksByGodown(godownId);
-      return { godown, stocks };
+      const authorizedStocks = reqAdmin.role === SuperAdmin.SUPER_ADMIN
+        ? stocks
+        : await Promise.all(
+            stocks.map(async (s: any) => {
+              const ownerGodown = s.companyGodownId || godown;
+              const canAccess = await validateStockModificationAccessWithFetch(
+                reqAdmin,
+                ownerGodown,
+                this.godownRepository
+              );
+              return canAccess ? s : null;
+            })
+          ).then((res) => res.filter(Boolean));
+
+      return { godown, stocks: authorizedStocks };
     } catch (error) {
       ErrorHandler.handleError(error, AdminErrorStage.GetAGodownUseCase, this.logger);
     }

@@ -26,6 +26,24 @@ export const CreateStockTransferRouteSchema = z.object({
   }),
 });
 
+export const UpdateStockTransferRouteSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Stock Transfer ID"),
+  }),
+  body: z.object({
+    date: z.string().optional(),
+    sourceItems: z.array(StockTransferSourceItemSchema).optional(),
+    destinationItems: z.array(StockTransferDestinationItemSchema).optional(),
+    narration: z.string().trim().max(1000).optional(),
+  }),
+});
+
+export const DeleteStockTransferRouteSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Stock Transfer ID"),
+  }),
+});
+
 export const GetStockTransferListRouteSchema = z.object({
   query: z.object({
     page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),

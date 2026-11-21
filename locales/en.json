@@ -70,6 +70,8 @@
   },
   "STOCK_TRANSFER": {
     "CREATED": "Stock transfer recorded successfully and stocks updated",
+    "UPDATED": "Stock transfer updated successfully and stocks reconciled",
+    "DELETED": "Stock transfer deleted successfully and stocks reverted",
     "FETCHED": "Stock transfer fetched successfully",
     "LIST_FETCHED": "Stock transfers fetched successfully",
     "AVAILABLE_STOCK_FETCHED": "Available stocks fetched successfully"

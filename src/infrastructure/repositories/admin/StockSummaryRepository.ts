@@ -47,7 +47,10 @@ export class StockSummaryRepository {
     }
 
     const itemFilterMatch: any = {
-      "items.godownId": { $in: allGodownIdVariants },
+      $or: [
+        { "items.godownId": { $in: allGodownIdVariants } },
+        { "items.companyGodownId": { $in: allGodownIdVariants } },
+      ],
     };
 
     if (options?.itemIds && options.itemIds.length > 0) {
@@ -67,6 +70,7 @@ export class StockSummaryRepository {
               in: {
                 itemId: "$$it.itemId",
                 godownId: { $ifNull: ["$$it.godownId", "$godownId"] },
+                companyGodownId: { $ifNull: ["$$it.companyGodownId", "$companyGodownId"] },
                 batchNo: { $ifNull: ["$$it.batchNo", ""] },
                 actualQuantity: { $ifNull: ["$$it.actualQuantity", 0] },
                 billedQuantity: { $ifNull: ["$$it.billedQuantity", 0] },
@@ -129,8 +133,12 @@ export class StockSummaryRepository {
     const godownObjectIds = accessibleGodownIds.map((id) => generateObjectId(id));
     const allGodownIdVariants = [...godownObjectIds, ...accessibleGodownIds];
     const query: any = {
-      godownId: { $in: allGodownIdVariants },
+      $or: [
+        { godownId: { $in: allGodownIdVariants } },
+        { companyGodownId: { $in: allGodownIdVariants } },
+      ],
       currentStock: { $gt: 0 },
+      isDeleted: false,
     };
 
     if (itemIds && itemIds.length > 0) {

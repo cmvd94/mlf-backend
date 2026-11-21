@@ -1,10 +1,11 @@
 import { injectable } from "tsyringe";
-import { GodownStock, GodownStockModel } from "@/domain/entities/admin/GodownStock";
+import { GodownStock, GodownStockModel, StockSourceType } from "@/domain/entities/admin/GodownStock";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
 import { ClientSession, Types } from "mongoose";
 
 export interface CreateBatchStockParams {
   godownId: string | Types.ObjectId;
+  companyGodownId: string | Types.ObjectId;
   itemId: string | Types.ObjectId;
   batchNo?: string;
   currentStock: number;
@@ -17,7 +18,7 @@ export interface CreateBatchStockParams {
   purchaseId?: string | Types.ObjectId;
   purchaseItemId?: string | Types.ObjectId;
   stockTransferId?: string | Types.ObjectId;
-  sourceType?: string;
+  sourceType?: StockSourceType;
   createdBy?: string | Types.ObjectId;
   updatedBy?: string | Types.ObjectId;
 }
@@ -30,12 +31,13 @@ export class GodownStockRepository {
   async createBatchStock(params: CreateBatchStockParams, session?: ClientSession): Promise<GodownStock> {
     const docData: any = {
       godownId: typeof params.godownId === "string" ? generateObjectId(params.godownId) : params.godownId,
+      companyGodownId: typeof params.companyGodownId === "string" ? generateObjectId(params.companyGodownId) : params.companyGodownId,
       itemId: typeof params.itemId === "string" ? generateObjectId(params.itemId) : params.itemId,
       batchNo: (params.batchNo || "").trim(),
       currentStock: Number(params.currentStock) || 0,
       initialStock: params.initialStock !== undefined ? Number(params.initialStock) : Number(params.currentStock) || 0,
       uomQuantity: params.uomQuantity !== undefined ? Number(params.uomQuantity) : 1,
-      sourceType: params.sourceType || "PURCHASE",
+      sourceType: params.sourceType || StockSourceType.PURCHASE,
       isActive: true,
       isDeleted: false,
     };
@@ -137,7 +139,8 @@ export class GodownStockRepository {
   async findById(id: string | Types.ObjectId) {
     const stockObjectId = typeof id === "string" ? generateObjectId(id) : id;
     return await GodownStockModel.findOne({ _id: stockObjectId, isDeleted: false })
-      .populate("godownId", "name code location isJobwork isActive")
+      .populate("godownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
+      .populate("companyGodownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
       .populate("itemId", "name itemCode defaultUomId defaultPerId standardRate")
       .populate("uomId", "name symbol")
       .populate("perId", "name symbol multiplier")
@@ -150,6 +153,14 @@ export class GodownStockRepository {
   async findByPurchaseId(purchaseId: string | Types.ObjectId) {
     const pObjectId = typeof purchaseId === "string" ? generateObjectId(purchaseId) : purchaseId;
     return await GodownStockModel.find({ purchaseId: pObjectId, isDeleted: false }).lean();
+  }
+
+  /**
+   * Find all GodownStock docs created by a stock transfer
+   */
+  async findByStockTransferId(stockTransferId: string | Types.ObjectId) {
+    const stObjectId = typeof stockTransferId === "string" ? generateObjectId(stockTransferId) : stockTransferId;
+    return await GodownStockModel.find({ stockTransferId: stObjectId, isDeleted: false }).lean();
   }
 
   /**
@@ -177,9 +188,33 @@ export class GodownStockRepository {
   }
 
   /**
+   * Delete or soft-delete all stock records for a stock transfer
+   */
+  async deleteByStockTransferId(
+    stockTransferId: string | Types.ObjectId,
+    adminId?: string | Types.ObjectId,
+    session?: ClientSession
+  ) {
+    const stObjectId = typeof stockTransferId === "string" ? generateObjectId(stockTransferId) : stockTransferId;
+    const adminObjectId = adminId ? (typeof adminId === "string" ? generateObjectId(adminId) : adminId) : undefined;
+
+    return await GodownStockModel.updateMany(
+      { stockTransferId: stObjectId },
+      {
+        $set: {
+          currentStock: 0,
+          isDeleted: true,
+          ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
+        },
+      },
+      { session }
+    );
+  }
+
+  /**
    * Get all available stocks (where currentStock > 0) in accessible godowns
    */
-  async getAvailableStocks(godownIds: string[], itemId?: string, search?: string) {
+  async getAvailableStocks(godownIds: string[], itemId?: string, search?: string, companyGodownIds?: string[]) {
     if (!godownIds || godownIds.length === 0) return [];
 
     const godownObjectIds = godownIds.map((id) => generateObjectId(id));
@@ -191,6 +226,12 @@ export class GodownStockRepository {
       isDeleted: false,
     };
 
+    if (companyGodownIds && companyGodownIds.length > 0) {
+      const compObjectIds = companyGodownIds.map((id) => generateObjectId(id));
+      const allCompVariants = [...compObjectIds, ...companyGodownIds];
+      matchQuery.companyGodownId = { $in: allCompVariants };
+    }
+
     if (itemId && itemId.trim().length > 0) {
       matchQuery.itemId = generateObjectId(itemId.trim());
     }
@@ -200,7 +241,8 @@ export class GodownStockRepository {
     }
 
     return await GodownStockModel.find(matchQuery)
-      .populate("godownId", "name code location isJobwork")
+      .populate("godownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
+      .populate("companyGodownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
       .populate("itemId", "name itemCode itemGroupId defaultUomId defaultPerId")
       .populate("uomId", "name symbol")
       .populate("perId", "name symbol multiplier")
@@ -244,7 +286,7 @@ export class GodownStockRepository {
             currentStock: quantityDelta,
             initialStock: quantityDelta,
             batchNo: "",
-            sourceType: "MANUAL",
+            sourceType: StockSourceType.MANUAL,
             ...(adminObjectId ? { updatedBy: adminObjectId as any, createdBy: adminObjectId as any } : {}),
           },
         ],
@@ -284,6 +326,8 @@ export class GodownStockRepository {
     const godownObjectId = typeof godownId === "string" ? generateObjectId(godownId) : godownId;
 
     return await GodownStockModel.find({ godownId: godownObjectId, isDeleted: false })
+      .populate("godownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
+      .populate("companyGodownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
       .populate("itemId", "name itemCode defaultUomId defaultPerId")
       .populate("uomId", "name symbol")
       .populate("perId", "name symbol multiplier")

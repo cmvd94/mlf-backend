@@ -10,12 +10,13 @@ import { CounterRepository } from "@/infrastructure/repositories/common/CounterR
 import { CreateStockTransferDTO } from "@/shared/dto/admin/stockTransferDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
-import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { compareAdminAndGodownLocation, validateStockModificationAccess, validateStockModificationAccessWithFetch } from "@/shared/utils/godownQueryHelper";
 import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession } from "mongoose";
+import { StockSourceType } from "@/domain/entities/admin/GodownStock";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessages";
 
@@ -58,6 +59,21 @@ export class CreateStockTransferUseCase {
           throw new HttpException(400, "Source godown is inactive or not found", ERROR_CODES.GODOWN_INACTIVE);
         }
 
+        // Validate stock modification permission on the company godown that owns this stock
+        const ownerCompanyGodown = stockDoc.companyGodownId || sourceGodown;
+        const canModifyStock = await validateStockModificationAccessWithFetch(
+          reqAdmin,
+          ownerCompanyGodown,
+          this.godownRepository
+        );
+        if (!canModifyStock) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
+            ERROR_CODES.GODOWN_ACCESS_DENIED
+          );
+        }
+
         // Hierarchy and regional access check on source godown
         const hasSourceAccess = compareAdminAndGodownLocation(reqAdmin, sourceGodown);
         if (!hasSourceAccess) {
@@ -81,6 +97,7 @@ export class CreateStockTransferUseCase {
 
         const sourceItemId = (stockDoc.itemId?._id || stockDoc.itemId).toString();
         const sourceGodownId = (sourceGodown._id || sourceGodown).toString();
+        const companyGodownId = (ownerCompanyGodown._id || ownerCompanyGodown).toString();
 
         // Resolve source UOM & UOM quantity: allow selection or default to batch UOM
         const rawSourceUom = src.uomId || stockDoc.uomId;
@@ -91,6 +108,7 @@ export class CreateStockTransferUseCase {
           stockDocId: stockDoc._id,
           sourceItemId,
           sourceGodownId,
+          companyGodownId,
           batchNo: (stockDoc.batchNo || "").trim(),
           requestedQty,
           uomId: sourceUomId,
@@ -179,6 +197,7 @@ export class CreateStockTransferUseCase {
             godownStockId: src.stockDocId,
             itemId: generateObjectId(src.sourceItemId),
             godownId: generateObjectId(src.sourceGodownId),
+            companyGodownId: generateObjectId(src.companyGodownId),
             batchNo: src.batchNo,
             quantity: src.requestedQty,
             uomId: src.uomId ? generateObjectId(src.uomId) : undefined,
@@ -186,11 +205,18 @@ export class CreateStockTransferUseCase {
           });
         }
 
+        const primaryCompanyGodownId = preparedSourceItems[0]?.companyGodownId;
+
         // Create destination batch stocks and increase aggregate item stock
         for (const dest of preparedDestItems) {
+          const destCompanyGodownId = primaryCompanyGodownId
+            ? generateObjectId(primaryCompanyGodownId)
+            : dest.destGodownId;
+
           const createdBatchDoc = await this.godownStockRepository.createBatchStock(
             {
               godownId: dest.destGodownId,
+              companyGodownId: destCompanyGodownId,
               itemId: dest.destItemId,
               batchNo: dest.batchNo,
               currentStock: dest.destQty,
@@ -198,7 +224,7 @@ export class CreateStockTransferUseCase {
               uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
               uomQuantity: dest.uomQuantity,
               stockTransferId: transferObjectId,
-              sourceType: "TRANSFER",
+              sourceType: StockSourceType.TRANSFER,
               createdBy: reqAdmin.userId,
               updatedBy: reqAdmin.userId,
             },
@@ -211,6 +237,7 @@ export class CreateStockTransferUseCase {
           calculatedDestinationItems.push({
             itemId: dest.destItemId,
             godownId: dest.destGodownId,
+            companyGodownId: destCompanyGodownId,
             batchNo: dest.batchNo,
             quantity: dest.destQty,
             uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,

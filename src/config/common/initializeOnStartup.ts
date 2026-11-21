@@ -1,7 +1,8 @@
 import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 import { PurchaseModel } from "@/domain/entities/admin/Purchase";
-import { GodownStockModel } from "@/domain/entities/admin/GodownStock";
+import { GodownStockModel, StockSourceType } from "@/domain/entities/admin/GodownStock";
+import { GodownModel, GodownType } from "@/domain/entities/admin/Godown";
 
 @injectable()
 export class InitializeOnStartup {
@@ -24,11 +25,26 @@ export class InitializeOnStartup {
       for (const p of purchases) {
         let modified = false;
 
+        // Ensure purchase has companyGodownId
+        if (!p.companyGodownId) {
+          const candidateGodownId = p.godownId || (p.items && p.items[0]?.godownId);
+          if (candidateGodownId) {
+            p.companyGodownId = candidateGodownId;
+            modified = true;
+          }
+        }
+
         if (p.items && p.items.length > 0) {
           for (const it of p.items) {
+            if (!it.companyGodownId && p.companyGodownId) {
+              it.companyGodownId = p.companyGodownId;
+              modified = true;
+            }
+
             if (!it.godownStockId && it.godownId && it.itemId) {
               const stockDoc = await GodownStockModel.create({
                 godownId: it.godownId,
+                companyGodownId: p.companyGodownId || it.godownId,
                 itemId: it.itemId,
                 batchNo: (it.batchNo || "").trim(),
                 currentStock: it.actualQuantity || 0,
@@ -39,7 +55,7 @@ export class InitializeOnStartup {
                 uomQuantity: it.uomQuantity || 1,
                 perId: it.perId,
                 purchaseId: p._id,
-                sourceType: "PURCHASE",
+                sourceType: StockSourceType.PURCHASE,
                 isActive: true,
                 isDeleted: false,
                 createdBy: p.createdBy,
@@ -52,6 +68,7 @@ export class InitializeOnStartup {
         } else if (p.itemId && p.godownId && !(p as any).godownStockId) {
           const stockDoc = await GodownStockModel.create({
             godownId: p.godownId,
+            companyGodownId: p.companyGodownId || p.godownId,
             itemId: p.itemId,
             batchNo: (p.batchNo || "").trim(),
             currentStock: p.actualQuantity || 0,
@@ -62,7 +79,7 @@ export class InitializeOnStartup {
             uomQuantity: p.uomQuantity || 1,
             perId: p.perId,
             purchaseId: p._id,
-            sourceType: "PURCHASE",
+            sourceType: StockSourceType.PURCHASE,
             isActive: true,
             isDeleted: false,
             createdBy: p.createdBy,
@@ -75,6 +92,18 @@ export class InitializeOnStartup {
         if (modified) {
           await p.save();
         }
+      }
+
+      // Backfill any remaining GodownStock docs without companyGodownId
+      const stocksWithoutCompany = await GodownStockModel.find({
+        $or: [{ companyGodownId: { $exists: false } }, { companyGodownId: null }],
+      });
+
+      for (const st of stocksWithoutCompany) {
+        await GodownStockModel.updateOne(
+          { _id: st._id },
+          { $set: { companyGodownId: st.godownId } }
+        );
       }
 
       if (backfilledCount > 0) {

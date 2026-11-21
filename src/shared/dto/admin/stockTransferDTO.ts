@@ -24,6 +24,13 @@ export interface CreateStockTransferDTO {
   narration?: string;
 }
 
+export interface UpdateStockTransferDTO {
+  date?: string;
+  sourceItems?: CreateStockTransferSourceItemDTO[];
+  destinationItems?: CreateStockTransferDestinationItemDTO[];
+  narration?: string;
+}
+
 export interface GetStockTransferListQueryDTO {
   page?: number;
   limit?: number;

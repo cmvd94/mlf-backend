@@ -25,10 +25,16 @@ export class GetPurchaseListUseCase {
       const query: any = {};
 
       // Restrict purchases to godowns within user's hierarchy and regional scope
+      const targetGodownIdInput = dto.companyGodownId || dto.godownId;
+
       if (reqAdmin.role === SuperAdmin.SUPER_ADMIN) {
-        if (dto.godownId) {
-          const targetObjId = generateObjectId(dto.godownId);
-          query.$or = [{ godownId: targetObjId }, { "items.godownId": targetObjId }];
+        if (targetGodownIdInput) {
+          const targetObjId = generateObjectId(targetGodownIdInput);
+          query.$or = [
+            { companyGodownId: targetObjId },
+            { godownId: targetObjId },
+            { "items.godownId": targetObjId },
+          ];
         }
       } else {
         const { query: godownQuery, hasAccess } = generateGodownQuery({}, reqAdmin);
@@ -46,8 +52,8 @@ export class GetPurchaseListUseCase {
           };
         }
 
-        if (dto.godownId) {
-          const targetGodown = await this.godownRepository.findGodownById(dto.godownId);
+        if (targetGodownIdInput) {
+          const targetGodown = await this.godownRepository.findGodownById(targetGodownIdInput);
           if (
             !targetGodown ||
             targetGodown.isDeleted ||
@@ -65,11 +71,16 @@ export class GetPurchaseListUseCase {
               },
             };
           }
-          const targetObjId = generateObjectId(dto.godownId);
-          query.$or = [{ godownId: targetObjId }, { "items.godownId": targetObjId }];
+          const targetObjId = generateObjectId(targetGodownIdInput);
+          query.$or = [
+            { companyGodownId: targetObjId },
+            { godownId: targetObjId },
+            { "items.godownId": targetObjId },
+          ];
         } else {
           const accessibleGodownIds = await this.godownRepository.getGodownIdsByQuery(godownQuery);
           query.$or = [
+            { companyGodownId: { $in: accessibleGodownIds } },
             { godownId: { $in: accessibleGodownIds } },
             { "items.godownId": { $in: accessibleGodownIds } },
           ];

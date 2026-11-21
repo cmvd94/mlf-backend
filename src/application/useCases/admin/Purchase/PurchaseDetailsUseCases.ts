@@ -3,8 +3,9 @@ import { Logger } from "winston";
 import { PurchaseRepository } from "@/infrastructure/repositories/admin/PurchaseRepository";
 import { ItemRepository } from "@/infrastructure/repositories/admin/ItemRepository";
 import { GodownStockRepository } from "@/infrastructure/repositories/admin/GodownStockRepository";
+import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
-import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { compareAdminAndGodownLocation, validateStockModificationAccess, validateStockModificationAccessWithFetch } from "@/shared/utils/godownQueryHelper";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { withTransaction } from "@/shared/utils/withTransaction";
@@ -16,6 +17,7 @@ import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessag
 export class GetPurchaseByIdUseCase {
   constructor(
     @inject(PurchaseRepository) private purchaseRepository: PurchaseRepository,
+    @inject(GodownRepository) private godownRepository: GodownRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -24,6 +26,22 @@ export class GetPurchaseByIdUseCase {
       const purchase: any = await this.purchaseRepository.getPurchaseById(id);
       if (!purchase) {
         throw new HttpException(404, ERROR_MESSAGES.PURCHASE_NOT_FOUND, ERROR_CODES.PURCHASE_NOT_FOUND);
+      }
+
+      // Check access for company godown if present
+      if (purchase.companyGodownId) {
+        const hasCompanyAccess = await validateStockModificationAccessWithFetch(
+          reqAdmin,
+          purchase.companyGodownId,
+          this.godownRepository
+        );
+        if (!hasCompanyAccess) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.GODOWN_ACCESS_DENIED,
+            ERROR_CODES.GODOWN_ACCESS_DENIED
+          );
+        }
       }
 
       // Check access for root godown if present
@@ -84,6 +102,7 @@ export class DeletePurchaseUseCase {
     @inject(PurchaseRepository) private purchaseRepository: PurchaseRepository,
     @inject(GodownStockRepository) private godownStockRepository: GodownStockRepository,
     @inject(ItemRepository) private itemRepository: ItemRepository,
+    @inject(GodownRepository) private godownRepository: GodownRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -92,6 +111,23 @@ export class DeletePurchaseUseCase {
       const existingPurchase: any = await this.purchaseRepository.getPurchaseById(id);
       if (!existingPurchase) {
         throw new HttpException(404, ERROR_MESSAGES.PURCHASE_NOT_FOUND, ERROR_CODES.PURCHASE_NOT_FOUND);
+      }
+
+      // Validate stock modification permission on the company godown that owns this purchase stock
+      const targetCompanyGodown = existingPurchase.companyGodownId || existingPurchase.godownId;
+      if (targetCompanyGodown) {
+        const hasAccess = await validateStockModificationAccessWithFetch(
+          reqAdmin,
+          targetCompanyGodown,
+          this.godownRepository
+        );
+        if (!hasAccess) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
+            ERROR_CODES.GODOWN_ACCESS_DENIED
+          );
+        }
       }
 
       const rootGodownId = (existingPurchase.godownId as any)?._id || existingPurchase.godownId;

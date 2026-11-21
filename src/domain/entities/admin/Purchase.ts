@@ -21,6 +21,9 @@ export class PurchaseItem {
   @prop({ ref: () => "Godown", required: true })
   public godownId!: Ref<any>;
 
+  @prop({ ref: () => "Godown", required: false })
+  public companyGodownId?: Ref<any>;
+
   @prop({ type: String, trim: true, default: "" })
   public batchNo!: string;
 
@@ -61,6 +64,7 @@ export class PurchaseItem {
 )
 @index({ date: -1 })
 @index({ partyId: 1 })
+@index({ companyGodownId: 1 })
 @index({ "items.itemId": 1 })
 @index({ "items.godownId": 1 })
 export class Purchase {
@@ -72,6 +76,9 @@ export class Purchase {
 
   @prop({ required: true })
   public date!: Date;
+
+  @prop({ ref: () => "Godown", required: true })
+  public companyGodownId!: Ref<any>;
 
   @prop({ ref: () => "Godown", required: false })
   public godownId?: Ref<any>;

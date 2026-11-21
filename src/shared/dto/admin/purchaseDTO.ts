@@ -2,6 +2,7 @@ export interface CreatePurchaseItemDTO {
   _id?: string;
   itemId: string;
   godownId: string;
+  companyGodownId?: string;
   batchNo?: string;
   uomId: string;
   uomQuantity: number;
@@ -16,6 +17,7 @@ export interface CreatePurchaseDTO {
   date: string;
   partyId: string;
   purchaseTypeId: string;
+  companyGodownId: string;
   items: CreatePurchaseItemDTO[];
   isGstBill?: boolean;
   gstPercentage?: number;
@@ -37,6 +39,7 @@ export interface UpdatePurchaseDTO {
   date?: string;
   partyId?: string;
   purchaseTypeId?: string;
+  companyGodownId?: string;
   items?: CreatePurchaseItemDTO[];
   isGstBill?: boolean;
   gstPercentage?: number;
@@ -62,6 +65,7 @@ export interface GetPurchaseListQueryDTO {
   itemId?: string;
   purchaseTypeId?: string;
   godownId?: string;
+  companyGodownId?: string;
   startDate?: string;
   endDate?: string;
 }

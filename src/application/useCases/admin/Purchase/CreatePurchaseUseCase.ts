@@ -12,13 +12,15 @@ import { CounterRepository } from "@/infrastructure/repositories/common/CounterR
 import { CreatePurchaseDTO, CreatePurchaseItemDTO } from "@/shared/dto/admin/purchaseDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
-import { compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { compareAdminAndGodownLocation, validateStockModificationAccess } from "@/shared/utils/godownQueryHelper";
 import { parseVoucherDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { FINANCIAL_CONFIG } from "@/shared/constants/financialConfig";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession } from "mongoose";
+import { GodownType } from "@/domain/entities/admin/Godown";
+import { StockSourceType } from "@/domain/entities/admin/GodownStock";
 import HttpException from "@/shared/exceptions/HttpException";
 import { ERROR_CODES, ERROR_MESSAGES } from "@/shared/constants/errorCodesMessages";
 
@@ -49,6 +51,32 @@ export class CreatePurchaseUseCase {
       const purchaseType = await this.purchaseTypeRepository.getPurchaseTypeById(dto.purchaseTypeId);
       if (!purchaseType || !purchaseType.isActive) {
         throw new HttpException(404, ERROR_MESSAGES.PURCHASE_TYPE_NOT_FOUND, ERROR_CODES.PURCHASE_TYPE_NOT_FOUND);
+      }
+
+      // 3. Mandatory Company Godown verification & stock modification permission
+      const companyGodownIdInput = dto.companyGodownId || dto.godownId;
+      if (!companyGodownIdInput) {
+        throw new HttpException(400, ERROR_MESSAGES.COMPANY_GODOWN_REQUIRED, ERROR_CODES.COMPANY_GODOWN_REQUIRED);
+      }
+
+      const companyGodown = await this.godownRepository.findGodownById(companyGodownIdInput);
+      if (!companyGodown || companyGodown.isDeleted) {
+        throw new HttpException(404, ERROR_MESSAGES.GODOWN_NOT_FOUND, ERROR_CODES.GODOWN_NOT_FOUND);
+      }
+      if (!companyGodown.isActive) {
+        throw new HttpException(400, ERROR_MESSAGES.GODOWN_INACTIVE, ERROR_CODES.GODOWN_INACTIVE);
+      }
+      if (companyGodown.type !== GodownType.COMPANY_GODOWN) {
+        throw new HttpException(400, ERROR_MESSAGES.COMPANY_GODOWN_INVALID, ERROR_CODES.COMPANY_GODOWN_INVALID);
+      }
+
+      const hasCompanyGodownAccess = validateStockModificationAccess(reqAdmin, companyGodown);
+      if (!hasCompanyGodownAccess) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
+          ERROR_CODES.GODOWN_ACCESS_DENIED
+        );
       }
 
       // Normalize items list (supports both items array and legacy single item)
@@ -134,6 +162,7 @@ export class CreatePurchaseUseCase {
         calculatedItems.push({
           itemId: generateObjectId(itemDto.itemId) as any,
           godownId: generateObjectId(targetGodownId) as any,
+          companyGodownId: companyGodown._id,
           batchNo: itemDto.batchNo?.trim() || "",
           uomId: generateObjectId(itemDto.uomId) as any,
           uomQuantity: uomQty,
@@ -174,6 +203,7 @@ export class CreatePurchaseUseCase {
           const stockDoc = await this.godownStockRepository.createBatchStock(
             {
               godownId: calculatedItem.godownId,
+              companyGodownId: companyGodown._id,
               itemId: calculatedItem.itemId,
               batchNo: calculatedItem.batchNo,
               currentStock: calculatedItem.actualQuantity,
@@ -182,7 +212,7 @@ export class CreatePurchaseUseCase {
               uomQuantity: calculatedItem.uomQuantity,
               perId: calculatedItem.perId,
               purchaseId: purchaseObjectId,
-              sourceType: "PURCHASE",
+              sourceType: StockSourceType.PURCHASE,
               createdBy: reqAdmin.userId,
               updatedBy: reqAdmin.userId,
             },
@@ -208,6 +238,8 @@ export class CreatePurchaseUseCase {
             date: parseVoucherDate(dto.date),
             partyId: generateObjectId(dto.partyId) as any,
             purchaseTypeId: generateObjectId(dto.purchaseTypeId) as any,
+            companyGodownId: companyGodown._id,
+            godownId: companyGodown._id, // Legacy compatibility
             items: calculatedItems,
             subTotal,
             isGstBill,

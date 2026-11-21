@@ -22,6 +22,9 @@ export class StockTransferSourceItem {
   @prop({ ref: () => "Godown", required: true })
   public godownId!: Ref<any>;
 
+  @prop({ ref: () => "Godown", required: false })
+  public companyGodownId?: Ref<any>;
+
   @prop({ type: String, trim: true, default: "" })
   public batchNo!: string;
 
@@ -50,6 +53,9 @@ export class StockTransferDestinationItem {
 
   @prop({ ref: () => "Godown", required: true })
   public godownId!: Ref<any>;
+
+  @prop({ ref: () => "Godown", required: false })
+  public companyGodownId?: Ref<any>;
 
   @prop({ type: String, trim: true, default: "" })
   public batchNo!: string;

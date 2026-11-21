@@ -4,7 +4,7 @@ import { GodownStockRepository } from "@/infrastructure/repositories/admin/Godow
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
 import { GetAvailableStockQueryDTO } from "@/shared/dto/admin/stockTransferDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
-import { generateGodownQuery, compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
+import { generateGodownQuery, compareAdminAndGodownLocation, validateStockModificationAccess, validateStockModificationAccessWithFetch } from "@/shared/utils/godownQueryHelper";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import HttpException from "@/shared/exceptions/HttpException";
@@ -56,11 +56,28 @@ export class GetAvailableStockForTransferUseCase {
         dto.search
       );
 
-      return stocks.map((s: any) => ({
+      // Filter stocks by company godown ownership & stock modification permission
+      const stockAccessChecks = await Promise.all(
+        stocks.map(async (s: any) => {
+          const ownerGodown = s.companyGodownId || s.godownId;
+          if (!ownerGodown) return false;
+          return await validateStockModificationAccessWithFetch(
+            reqAdmin,
+            ownerGodown,
+            this.godownRepository
+          );
+        })
+      );
+      const authorizedStocks = stocks.filter((_, idx) => stockAccessChecks[idx]);
+
+      return authorizedStocks.map((s: any) => ({
         godownStockId: s._id.toString(),
         godownId: s.godownId?._id?.toString() || s.godownId?.toString(),
         godownName: s.godownId?.name || "Unknown Godown",
-        godownCode: s.godownId?.code || "",
+        godownCode: s.godownId?.code || s.godownId?.godownId || "",
+        companyGodownId: s.companyGodownId?._id?.toString() || s.companyGodownId?.toString() || "",
+        companyGodownName: s.companyGodownId?.name || "",
+        companyGodownCode: s.companyGodownId?.godownId || "",
         itemId: s.itemId?._id?.toString() || s.itemId?.toString(),
         itemName: s.itemId?.name || "Unknown Item",
         itemCode: s.itemId?.itemCode || "",
