@@ -96,7 +96,11 @@ export class GetStockTransferListUseCase {
           $or: [
             { transferNumber: regex },
             { narration: regex },
+            { "sourceItems.dcNo": regex },
+            { "sourceItems.lotNo": regex },
             { "sourceItems.batchNo": regex },
+            { "destinationItems.dcNo": regex },
+            { "destinationItems.lotNo": regex },
             { "destinationItems.batchNo": regex },
           ],
         });

@@ -26,7 +26,10 @@ export class StockTransferSourceItem {
   public companyGodownId?: Ref<any>;
 
   @prop({ type: String, trim: true, default: "" })
-  public batchNo!: string;
+  public dcNo!: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public lotNo!: string;
 
   @prop({ ref: () => UnitOfMeasurement, required: false })
   public uomId?: Ref<UnitOfMeasurement>;
@@ -58,7 +61,10 @@ export class StockTransferDestinationItem {
   public companyGodownId?: Ref<any>;
 
   @prop({ type: String, trim: true, default: "" })
-  public batchNo!: string;
+  public dcNo!: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public lotNo!: string;
 
   @prop({ ref: () => UnitOfMeasurement, required: false })
   public uomId?: Ref<UnitOfMeasurement>;
@@ -118,14 +124,14 @@ export class StockTransfer {
   @prop({ required: true, default: 0 })
   public totalSourceQuantity!: number;
 
-  @prop({ required: true, default: 0 })
-  public totalSourceAmount!: number;
+  @prop({ required: false, default: 0 })
+  public totalSourceAmount?: number;
 
   @prop({ required: true, default: 0 })
   public totalDestinationQuantity!: number;
 
-  @prop({ required: true, default: 0 })
-  public totalDestinationAmount!: number;
+  @prop({ required: false, default: 0 })
+  public totalDestinationAmount?: number;
 
   @prop({ type: String, trim: true, default: "" })
   public narration!: string;

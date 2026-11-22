@@ -207,7 +207,8 @@ export class UpdatePurchaseUseCase {
             itemId: generateObjectId(itemDto.itemId) as any,
             godownId: generateObjectId(targetGodownId) as any,
             companyGodownId: effectiveCompanyGodownId,
-            batchNo: itemDto.batchNo?.trim() || "",
+            dcNo: (itemDto.dcNo || itemDto.batchNo || "").trim(),
+            lotNo: itemDto.lotNo?.trim() || "",
             uomId: generateObjectId(itemDto.uomId) as any,
             uomQuantity: uomQty,
             actualQuantity: actualQty,
@@ -296,9 +297,10 @@ export class UpdatePurchaseUseCase {
 
             // Prevent reduction below transferred/consumed stock
             if (matchedStockDoc.currentStock + qtyDelta < 0) {
+              const label = newIt.dcNo || matchedStockDoc.dcNo || matchedStockDoc.batchNo || "N/A";
               throw new HttpException(
                 400,
-                `Cannot reduce purchase quantity for batch "${newIt.batchNo || matchedStockDoc.batchNo}" below already transferred or consumed stock. Current remaining: ${matchedStockDoc.currentStock}, reduction requested: ${Math.abs(qtyDelta)}`,
+                `Cannot reduce purchase quantity for DC "${label}" below already transferred or consumed stock. Current remaining: ${matchedStockDoc.currentStock}, reduction requested: ${Math.abs(qtyDelta)}`,
                 ERROR_CODES.INSUFFICIENT_STOCK
               );
             }
@@ -317,9 +319,10 @@ export class UpdatePurchaseUseCase {
               unusedDoc.initialStock !== undefined ? unusedDoc.initialStock : unusedDoc.currentStock
             ) || 0;
             if (unusedDoc.currentStock < initialQty) {
+              const label = unusedDoc.dcNo || (unusedDoc as any).batchNo || "N/A";
               throw new HttpException(
                 400,
-                `Cannot remove item batch "${unusedDoc.batchNo}" from purchase because stock has already been transferred or consumed.`,
+                `Cannot remove item DC "${label}" from purchase because stock has already been transferred or consumed.`,
                 ERROR_CODES.INSUFFICIENT_STOCK
               );
             }
@@ -358,7 +361,8 @@ export class UpdatePurchaseUseCase {
 
         // Update legacy mirror fields
         updateData.itemId = calculatedItems[0].itemId;
-        updateData.batchNo = calculatedItems[0].batchNo;
+        updateData.dcNo = calculatedItems[0].dcNo;
+        updateData.lotNo = calculatedItems[0].lotNo;
         updateData.uomId = calculatedItems[0].uomId;
         updateData.uomQuantity = calculatedItems[0].uomQuantity;
         updateData.actualQuantity = calculatedItems[0].actualQuantity;
@@ -418,7 +422,8 @@ export class UpdatePurchaseUseCase {
                   godownId: newIt.godownId,
                   companyGodownId: effectiveCompanyGodownId,
                   itemId: newIt.itemId,
-                  batchNo: newIt.batchNo,
+                  dcNo: newIt.dcNo,
+                  lotNo: newIt.lotNo,
                   currentStock: Number(matchedStockDoc.currentStock + qtyDelta),
                   initialStock: newIt.actualQuantity,
                   uomId: newIt.uomId,
@@ -436,7 +441,8 @@ export class UpdatePurchaseUseCase {
                   godownId: newIt.godownId,
                   companyGodownId: effectiveCompanyGodownId,
                   itemId: newIt.itemId,
-                  batchNo: newIt.batchNo,
+                  dcNo: newIt.dcNo,
+                  lotNo: newIt.lotNo,
                   currentStock: newIt.actualQuantity,
                   initialStock: newIt.actualQuantity,
                   rate: newIt.rate,

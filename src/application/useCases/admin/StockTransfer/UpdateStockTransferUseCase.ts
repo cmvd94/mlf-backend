@@ -101,9 +101,10 @@ export class UpdateStockTransferUseCase {
       for (const stock of existingStockDocs) {
         const initial = Number(stock.initialStock !== undefined ? stock.initialStock : stock.currentStock) || 0;
         if (Number(stock.currentStock) < initial) {
+          const label = stock.dcNo || (stock as any).batchNo || "N/A";
           throw new HttpException(
             400,
-            `Cannot update stock transfer because destination stock for batch "${stock.batchNo}" has already been transferred or consumed.`,
+            `Cannot update stock transfer because destination stock for DC "${label}" has already been transferred or consumed.`,
             ERROR_CODES.INSUFFICIENT_STOCK
           );
         }
@@ -111,9 +112,11 @@ export class UpdateStockTransferUseCase {
 
       // Map existing consumption per source batch to credit back during availability check
       const oldQtyByStockId = new Map<string, number>();
+      const oldUomQtyByStockId = new Map<string, number>();
       for (const oldSrc of existingTransfer.sourceItems || []) {
         const oldStockId = (oldSrc.godownStockId?._id || oldSrc.godownStockId).toString();
         oldQtyByStockId.set(oldStockId, (oldQtyByStockId.get(oldStockId) || 0) + Number(oldSrc.quantity || 0));
+        oldUomQtyByStockId.set(oldStockId, (oldUomQtyByStockId.get(oldStockId) || 0) + Number(oldSrc.uomQuantity || 0));
       }
 
       // 1. Validate new Source items
@@ -158,12 +161,35 @@ export class UpdateStockTransferUseCase {
         const stockDocId = stockDoc._id.toString();
         const availableStockIncludingRevert = Number(stockDoc.currentStock) + (oldQtyByStockId.get(stockDocId) || 0);
 
+        const srcDcNo = (stockDoc.dcNo || stockDoc.batchNo || "").trim();
+        const srcLotNo = (stockDoc.lotNo || "").trim();
+
         if (availableStockIncludingRevert < requestedQty) {
           throw new HttpException(
             400,
-            `Insufficient stock for batch '${stockDoc.batchNo || "N/A"}'. Available: ${availableStockIncludingRevert}, Requested: ${requestedQty}`,
+            `Insufficient stock for DC '${srcDcNo || "N/A"}'. Available: ${availableStockIncludingRevert}, Requested: ${requestedQty}`,
             ERROR_CODES.INSUFFICIENT_STOCK
           );
+        }
+
+        // Validate UOM quantity
+        const availableUomStock = Number(stockDoc.uomQuantity || 0) + (oldUomQtyByStockId.get(stockDocId) || 0);
+        let sourceUomQty = 1;
+        if (src.uomQuantity !== undefined) {
+          const reqUomQty = Number(src.uomQuantity);
+          if (reqUomQty <= 0) {
+            throw new HttpException(400, "Source UOM quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
+          }
+          if (availableUomStock > 0 && reqUomQty > availableUomStock) {
+            throw new HttpException(
+              400,
+              `Insufficient UOM quantity for DC '${srcDcNo || "N/A"}'. Available: ${availableUomStock}, Requested: ${reqUomQty}`,
+              ERROR_CODES.INSUFFICIENT_STOCK
+            );
+          }
+          sourceUomQty = reqUomQty;
+        } else if (stockDoc.uomQuantity !== undefined && stockDoc.uomQuantity > 0) {
+          sourceUomQty = Number(stockDoc.uomQuantity);
         }
 
         totalSourceQuantity += requestedQty;
@@ -174,17 +200,21 @@ export class UpdateStockTransferUseCase {
 
         const rawSourceUom = src.uomId || stockDoc.uomId;
         const sourceUomId = rawSourceUom ? ((rawSourceUom as any)._id || rawSourceUom).toString() : undefined;
-        const sourceUomQty = src.uomQuantity !== undefined ? Number(src.uomQuantity) : (stockDoc.uomQuantity || 1);
+
+        const rawSourcePer = src.perId || stockDoc.perId || stockDoc.itemId?.defaultPerId;
+        const sourcePerId = rawSourcePer ? ((rawSourcePer as any)._id || rawSourcePer).toString() : undefined;
 
         preparedSourceItems.push({
           stockDocId: stockDoc._id,
           sourceItemId,
           sourceGodownId,
           companyGodownId,
-          batchNo: (stockDoc.batchNo || "").trim(),
+          dcNo: srcDcNo,
+          lotNo: srcLotNo,
           requestedQty,
           uomId: sourceUomId,
           uomQuantity: sourceUomQty,
+          perId: sourcePerId,
           rate: src.rate !== undefined ? Number(src.rate) : (stockDoc.rate || 0),
         });
       }
@@ -216,6 +246,9 @@ export class UpdateStockTransferUseCase {
         const uomId = destUomRaw ? ((destUomRaw as any)._id || destUomRaw).toString() : undefined;
         const uomQuantity = dest.uomQuantity !== undefined ? Number(dest.uomQuantity) : 1;
 
+        const destPerRaw = dest.perId || destItem.defaultPerId;
+        const perId = destPerRaw ? ((destPerRaw as any)._id || destPerRaw).toString() : undefined;
+
         const destQty = Number(dest.quantity);
         if (destQty <= 0) {
           throw new HttpException(400, "Destination quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
@@ -223,18 +256,21 @@ export class UpdateStockTransferUseCase {
 
         totalDestinationQuantity += destQty;
 
-        const newBatchNo = (dest.batchNo || "").trim();
-        if (!newBatchNo) {
-          throw new HttpException(400, "Destination Batch / Lot number is required", ERROR_CODES.VALIDATION_ERROR);
+        const newDcNo = (dest.dcNo || dest.batchNo || "").trim();
+        const newLotNo = (dest.lotNo || "").trim();
+        if (!newDcNo) {
+          throw new HttpException(400, "Destination DC number is required", ERROR_CODES.VALIDATION_ERROR);
         }
 
         preparedDestItems.push({
           destGodownId: destGodown._id,
           destItemId: destItem._id,
-          batchNo: newBatchNo,
+          dcNo: newDcNo,
+          lotNo: newLotNo,
           destQty,
           uomId,
           uomQuantity,
+          perId,
           rate: dest.rate !== undefined ? Number(dest.rate) : 0,
         });
       }
@@ -254,8 +290,9 @@ export class UpdateStockTransferUseCase {
           const srcStockId = (src.godownStockId?._id || src.godownStockId).toString();
           const srcItemId = (src.itemId?._id || src.itemId).toString();
           const srcQty = Number(src.quantity) || 0;
+          const srcUomQty = Number(src.uomQuantity) || 0;
 
-          await this.godownStockRepository.increaseStock(srcStockId, srcQty, reqAdmin.userId, session);
+          await this.godownStockRepository.increaseStock(srcStockId, srcQty, reqAdmin.userId, session, srcUomQty);
           await this.itemRepository.adjustStockQuantity(srcItemId, srcQty, session);
         }
 
@@ -266,12 +303,13 @@ export class UpdateStockTransferUseCase {
             src.stockDocId,
             src.requestedQty,
             reqAdmin.userId,
-            session
+            session,
+            src.uomQuantity
           );
           if (!updatedStock) {
             throw new HttpException(
               400,
-              `Could not deduct stock for batch '${src.batchNo || "N/A"}'. Stock may have changed.`,
+              `Could not deduct stock for DC '${src.dcNo || "N/A"}'. Stock may have changed.`,
               ERROR_CODES.INSUFFICIENT_STOCK
             );
           }
@@ -283,12 +321,13 @@ export class UpdateStockTransferUseCase {
             itemId: generateObjectId(src.sourceItemId),
             godownId: generateObjectId(src.sourceGodownId),
             companyGodownId: generateObjectId(src.companyGodownId),
-            batchNo: src.batchNo,
+            dcNo: src.dcNo,
+            lotNo: src.lotNo,
             quantity: src.requestedQty,
             rate: src.rate,
-            amount: Number((src.requestedQty * src.rate).toFixed(2)),
             uomId: src.uomId ? generateObjectId(src.uomId) : undefined,
             uomQuantity: src.uomQuantity,
+            perId: src.perId ? generateObjectId(src.perId) : undefined,
           });
         }
 
@@ -306,11 +345,14 @@ export class UpdateStockTransferUseCase {
               godownId: dest.destGodownId,
               companyGodownId: destCompanyGodownId,
               itemId: dest.destItemId,
-              batchNo: dest.batchNo,
+              dcNo: dest.dcNo,
+              lotNo: dest.lotNo,
               currentStock: dest.destQty,
               initialStock: dest.destQty,
+              rate: dest.rate,
               uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
               uomQuantity: dest.uomQuantity,
+              perId: dest.perId ? generateObjectId(dest.perId) : undefined,
               stockTransferId: existingTransfer._id,
               sourceType: StockSourceType.TRANSFER,
               createdBy: reqAdmin.userId,
@@ -325,12 +367,13 @@ export class UpdateStockTransferUseCase {
             itemId: dest.destItemId,
             godownId: dest.destGodownId,
             companyGodownId: destCompanyGodownId,
-            batchNo: dest.batchNo,
+            dcNo: dest.dcNo,
+            lotNo: dest.lotNo,
             quantity: dest.destQty,
             rate: dest.rate,
-            amount: Number((dest.destQty * dest.rate).toFixed(2)),
             uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
             uomQuantity: dest.uomQuantity,
+            perId: dest.perId ? generateObjectId(dest.perId) : undefined,
             destinationGodownStockId: createdBatchDoc._id,
           });
         }
@@ -341,9 +384,7 @@ export class UpdateStockTransferUseCase {
           sourceItems: calculatedSourceItems,
           destinationItems: calculatedDestinationItems,
           totalSourceQuantity,
-          totalSourceAmount: calculatedSourceItems.reduce((acc, it) => acc + (it.amount || 0), 0),
           totalDestinationQuantity,
-          totalDestinationAmount: calculatedDestinationItems.reduce((acc, it) => acc + (it.amount || 0), 0),
           narration: dto.narration !== undefined ? dto.narration.trim() : existingTransfer.narration,
           updatedBy: generateObjectId(reqAdmin.userId),
         };

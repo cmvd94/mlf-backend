@@ -3,13 +3,16 @@ export interface CreateStockTransferSourceItemDTO {
   quantity: number;
   uomId?: string;
   uomQuantity?: number;
+  perId?: string;
   rate?: number;
 }
 
 export interface CreateStockTransferDestinationItemDTO {
   itemId: string;
   godownId: string;
-  batchNo: string;
+  dcNo: string;
+  lotNo?: string;
+  batchNo?: string;
   quantity: number;
   rate?: number;
   uomId?: string;

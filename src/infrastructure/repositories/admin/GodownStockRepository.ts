@@ -7,6 +7,8 @@ export interface CreateBatchStockParams {
   godownId: string | Types.ObjectId;
   companyGodownId: string | Types.ObjectId;
   itemId: string | Types.ObjectId;
+  dcNo?: string;
+  lotNo?: string;
   batchNo?: string;
   currentStock: number;
   initialStock?: number;
@@ -33,7 +35,8 @@ export class GodownStockRepository {
       godownId: typeof params.godownId === "string" ? generateObjectId(params.godownId) : params.godownId,
       companyGodownId: typeof params.companyGodownId === "string" ? generateObjectId(params.companyGodownId) : params.companyGodownId,
       itemId: typeof params.itemId === "string" ? generateObjectId(params.itemId) : params.itemId,
-      batchNo: (params.batchNo || "").trim(),
+      dcNo: (params.dcNo || params.batchNo || "").trim(),
+      lotNo: (params.lotNo || "").trim(),
       currentStock: Number(params.currentStock) || 0,
       initialStock: params.initialStock !== undefined ? Number(params.initialStock) : Number(params.currentStock) || 0,
       uomQuantity: params.uomQuantity !== undefined ? Number(params.uomQuantity) : 1,
@@ -92,19 +95,30 @@ export class GodownStockRepository {
     godownStockId: string | Types.ObjectId,
     quantity: number,
     adminId?: string | Types.ObjectId,
-    session?: ClientSession
+    session?: ClientSession,
+    uomQuantity?: number
   ): Promise<GodownStock | null> {
     const stockObjectId = typeof godownStockId === "string" ? generateObjectId(godownStockId) : godownStockId;
     const adminObjectId = adminId ? (typeof adminId === "string" ? generateObjectId(adminId) : adminId) : undefined;
 
+    const filter: any = {
+      _id: stockObjectId,
+      currentStock: { $gte: quantity },
+      isDeleted: false,
+    };
+    if (uomQuantity !== undefined && uomQuantity > 0) {
+      filter.uomQuantity = { $gte: uomQuantity };
+    }
+
+    const incUpdate: any = { currentStock: -quantity };
+    if (uomQuantity !== undefined && uomQuantity > 0) {
+      incUpdate.uomQuantity = -uomQuantity;
+    }
+
     return await GodownStockModel.findOneAndUpdate(
+      filter,
       {
-        _id: stockObjectId,
-        currentStock: { $gte: quantity },
-        isDeleted: false,
-      },
-      {
-        $inc: { currentStock: -quantity },
+        $inc: incUpdate,
         ...(adminObjectId ? { $set: { updatedBy: adminObjectId as any } } : {}),
       },
       { new: true, session }
@@ -118,15 +132,21 @@ export class GodownStockRepository {
     godownStockId: string | Types.ObjectId,
     quantity: number,
     adminId?: string | Types.ObjectId,
-    session?: ClientSession
+    session?: ClientSession,
+    uomQuantity?: number
   ): Promise<GodownStock | null> {
     const stockObjectId = typeof godownStockId === "string" ? generateObjectId(godownStockId) : godownStockId;
     const adminObjectId = adminId ? (typeof adminId === "string" ? generateObjectId(adminId) : adminId) : undefined;
 
+    const incUpdate: any = { currentStock: quantity };
+    if (uomQuantity !== undefined && uomQuantity > 0) {
+      incUpdate.uomQuantity = uomQuantity;
+    }
+
     return await GodownStockModel.findOneAndUpdate(
       { _id: stockObjectId, isDeleted: false },
       {
-        $inc: { currentStock: quantity },
+        $inc: incUpdate,
         ...(adminObjectId ? { $set: { updatedBy: adminObjectId as any } } : {}),
       },
       { new: true, session }
@@ -239,7 +259,8 @@ export class GodownStockRepository {
     }
 
     if (search && search.trim().length > 0) {
-      matchQuery.batchNo = new RegExp(search.trim(), "i");
+      const regex = new RegExp(search.trim(), "i");
+      matchQuery.$or = [{ dcNo: regex }, { lotNo: regex }, { batchNo: regex }];
     }
 
     return await GodownStockModel.find(matchQuery)

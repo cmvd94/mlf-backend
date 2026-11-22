@@ -31,6 +31,16 @@ export const formatRate = (rate: number | undefined | null, decimals: number = 2
   }).format(num);
 };
 
+export const formatDate = (date: Date | string | undefined | null): string => {
+  if (!date) return "-";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "-";
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 /**
  * Parses calendar voucher date consistently to UTC noon to prevent timezone shifts (e.g. 20th becoming 19th).
  */

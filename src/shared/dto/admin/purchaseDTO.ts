@@ -3,6 +3,8 @@ export interface CreatePurchaseItemDTO {
   itemId: string;
   godownId: string;
   companyGodownId?: string;
+  dcNo?: string;
+  lotNo?: string;
   batchNo?: string;
   uomId: string;
   uomQuantity: number;
@@ -26,6 +28,8 @@ export interface CreatePurchaseDTO {
   // Optional legacy fields for backward compatibility
   godownId?: string;
   itemId?: string;
+  dcNo?: string;
+  lotNo?: string;
   batchNo?: string;
   uomId?: string;
   uomQuantity?: number;
@@ -48,6 +52,8 @@ export interface UpdatePurchaseDTO {
   // Optional legacy fields for backward compatibility
   godownId?: string;
   itemId?: string;
+  dcNo?: string;
+  lotNo?: string;
   batchNo?: string;
   uomId?: string;
   uomQuantity?: number;

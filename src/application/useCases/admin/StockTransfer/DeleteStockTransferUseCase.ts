@@ -74,9 +74,10 @@ export class DeleteStockTransferUseCase {
       for (const stock of existingStocks) {
         const initial = Number(stock.initialStock !== undefined ? stock.initialStock : stock.currentStock) || 0;
         if (Number(stock.currentStock) < initial) {
+          const label = stock.dcNo || (stock as any).batchNo || "N/A";
           throw new HttpException(
             400,
-            `Cannot delete stock transfer because destination stock for batch "${stock.batchNo}" has already been transferred or consumed.`,
+            `Cannot delete stock transfer because destination stock for DC "${label}" has already been transferred or consumed.`,
             ERROR_CODES.INSUFFICIENT_STOCK
           );
         }
@@ -102,8 +103,9 @@ export class DeleteStockTransferUseCase {
           const srcStockId = (src.godownStockId?._id || src.godownStockId).toString();
           const srcItemId = (src.itemId?._id || src.itemId).toString();
           const srcQty = Number(src.quantity) || 0;
+          const srcUomQty = Number(src.uomQuantity) || 0;
 
-          await this.godownStockRepository.increaseStock(srcStockId, srcQty, reqAdmin.userId, session);
+          await this.godownStockRepository.increaseStock(srcStockId, srcQty, reqAdmin.userId, session, srcUomQty);
           await this.itemRepository.adjustStockQuantity(srcItemId, srcQty, session);
         }
 

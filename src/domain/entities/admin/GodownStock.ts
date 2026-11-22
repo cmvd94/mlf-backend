@@ -27,7 +27,7 @@ export enum StockSourceType {
 @index({ companyGodownId: 1 })
 @index({ companyGodownId: 1, itemId: 1 })
 @index({ godownId: 1, itemId: 1 })
-@index({ godownId: 1, itemId: 1, batchNo: 1 })
+@index({ godownId: 1, itemId: 1, dcNo: 1, lotNo: 1 })
 @index({ godownId: 1, currentStock: 1 })
 @index({ purchaseId: 1 })
 @index({ stockTransferId: 1 })
@@ -45,7 +45,10 @@ export class GodownStock {
   public itemId!: Ref<Item>;
 
   @prop({ type: String, trim: true, default: "" })
-  public batchNo!: string;
+  public dcNo!: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public lotNo!: string;
 
   @prop({ required: true, default: 0 })
   public currentStock!: number;

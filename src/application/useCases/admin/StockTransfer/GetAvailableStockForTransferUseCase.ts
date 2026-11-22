@@ -72,19 +72,24 @@ export class GetAvailableStockForTransferUseCase {
 
       return authorizedStocks.map((s: any) => {
         let rate = Number(s.rate) || 0;
-        const bNo = (s.batchNo || "").trim();
+        const dcNo = (s.dcNo || s.batchNo || "").trim();
+        const lotNo = (s.lotNo || "").trim();
         const itId = s.itemId?._id?.toString() || s.itemId?.toString() || "";
 
         if (rate <= 0 && s.purchaseId?.items) {
           const pItem = s.purchaseId.items.find((it: any) =>
-            (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === itId)
+            (it.dcNo && it.dcNo.trim() === dcNo) ||
+            (it.batchNo && it.batchNo.trim() === dcNo) ||
+            (it.itemId && it.itemId.toString() === itId)
           );
           if (pItem) rate = Number(pItem.rate) || 0;
         }
 
         if (rate <= 0 && s.stockTransferId?.destinationItems) {
           const dItem = s.stockTransferId.destinationItems.find((it: any) =>
-            (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === itId)
+            (it.dcNo && it.dcNo.trim() === dcNo) ||
+            (it.batchNo && it.batchNo.trim() === dcNo) ||
+            (it.itemId && it.itemId.toString() === itId)
           );
           if (dItem && Number(dItem.rate) > 0) {
             rate = Number(dItem.rate);
@@ -111,7 +116,9 @@ export class GetAvailableStockForTransferUseCase {
           itemId: itId,
           itemName: s.itemId?.name || "Unknown Item",
           itemCode: s.itemId?.itemCode || "",
-          batchNo: bNo,
+          dcNo,
+          lotNo,
+          batchNo: dcNo,
           currentStock: qty,
           rate,
           amount,
@@ -119,8 +126,10 @@ export class GetAvailableStockForTransferUseCase {
           uomName: s.uomId?.name || "",
           uomSymbol: s.uomId?.symbol || "",
           uomQuantity: s.uomQuantity || 1,
-          perId: s.perId?._id?.toString() || s.perId?.toString() || "",
-          perMultiplier: s.perId?.multiplier || 1,
+          perId: s.perId?._id?.toString() || s.perId?.toString() || s.itemId?.defaultPerId?._id?.toString() || s.itemId?.defaultPerId?.toString() || "",
+          perName: s.perId?.name || s.itemId?.defaultPerId?.name || "",
+          perSymbol: s.perId?.symbol || s.itemId?.defaultPerId?.symbol || "",
+          perMultiplier: s.perId?.multiplier || s.itemId?.defaultPerId?.multiplier || 1,
         };
       });
     } catch (error) {

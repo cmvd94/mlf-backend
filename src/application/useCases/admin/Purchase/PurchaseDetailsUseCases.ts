@@ -137,9 +137,10 @@ export class DeletePurchaseUseCase {
       for (const stock of existingStocks) {
         const initial = Number(stock.initialStock !== undefined ? stock.initialStock : stock.currentStock) || 0;
         if (stock.currentStock < initial) {
+          const label = stock.dcNo || (stock as any).batchNo || "N/A";
           throw new HttpException(
             400,
-            `Cannot delete purchase because stock for batch "${stock.batchNo}" has already been transferred or consumed.`,
+            `Cannot delete purchase because stock for DC "${label}" has already been transferred or consumed.`,
             ERROR_CODES.INSUFFICIENT_STOCK
           );
         }

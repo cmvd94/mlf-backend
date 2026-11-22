@@ -85,12 +85,34 @@ export class CreateStockTransferUseCase {
           throw new HttpException(400, "Source quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
         }
 
+        const srcDcNo = (stockDoc.dcNo || stockDoc.batchNo || "").trim();
+        const srcLotNo = (stockDoc.lotNo || "").trim();
+
         if (Number(stockDoc.currentStock) < requestedQty) {
           throw new HttpException(
             400,
-            `Insufficient stock for batch '${stockDoc.batchNo || "N/A"}'. Available: ${stockDoc.currentStock}, Requested: ${requestedQty}`,
+            `Insufficient stock for DC '${srcDcNo || "N/A"}'. Available: ${stockDoc.currentStock}, Requested: ${requestedQty}`,
             ERROR_CODES.INSUFFICIENT_STOCK
           );
+        }
+
+        // Validate UOM quantity
+        let sourceUomQty = 1;
+        if (src.uomQuantity !== undefined) {
+          const requestedUomQty = Number(src.uomQuantity);
+          if (requestedUomQty <= 0) {
+            throw new HttpException(400, "Source UOM quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
+          }
+          if (stockDoc.uomQuantity !== undefined && stockDoc.uomQuantity > 0 && requestedUomQty > Number(stockDoc.uomQuantity)) {
+            throw new HttpException(
+              400,
+              `Insufficient UOM quantity for DC '${srcDcNo || "N/A"}'. Available: ${stockDoc.uomQuantity}, Requested: ${requestedUomQty}`,
+              ERROR_CODES.INSUFFICIENT_STOCK
+            );
+          }
+          sourceUomQty = requestedUomQty;
+        } else if (stockDoc.uomQuantity !== undefined && stockDoc.uomQuantity > 0) {
+          sourceUomQty = Number(stockDoc.uomQuantity);
         }
 
         totalSourceQuantity += requestedQty;
@@ -99,16 +121,20 @@ export class CreateStockTransferUseCase {
         const sourceGodownId = (sourceGodown._id || sourceGodown).toString();
         const companyGodownId = (ownerCompanyGodown._id || ownerCompanyGodown).toString();
 
-        // Resolve source UOM & UOM quantity: allow selection or default to batch UOM
+        // Resolve source UOM: allow selection or default to batch UOM
         const rawSourceUom = src.uomId || stockDoc.uomId;
         const sourceUomId = rawSourceUom ? ((rawSourceUom as any)._id || rawSourceUom).toString() : undefined;
-        const sourceUomQty = src.uomQuantity !== undefined ? Number(src.uomQuantity) : (stockDoc.uomQuantity || 1);
+
+        // Resolve source Per Unit: allow selection or default to batch/item perUnit
+        const rawSourcePer = src.perId || stockDoc.perId || stockDoc.itemId?.defaultPerId;
+        const sourcePerId = rawSourcePer ? ((rawSourcePer as any)._id || rawSourcePer).toString() : undefined;
 
         // Resolve rate from input, stock batch, purchase, or item standard rate
         let sourceRate = Number(src.rate) || Number(stockDoc.rate) || 0;
         if (sourceRate <= 0 && stockDoc.purchaseId?.items) {
           const pItem = stockDoc.purchaseId.items.find((it: any) =>
-            (it.batchNo && it.batchNo.trim() === (stockDoc.batchNo || "").trim()) ||
+            (it.dcNo && it.dcNo.trim() === srcDcNo) ||
+            (it.batchNo && it.batchNo.trim() === srcDcNo) ||
             (it.itemId && it.itemId.toString() === sourceItemId)
           );
           if (pItem) sourceRate = Number(pItem.rate) || 0;
@@ -122,10 +148,12 @@ export class CreateStockTransferUseCase {
           sourceItemId,
           sourceGodownId,
           companyGodownId,
-          batchNo: (stockDoc.batchNo || "").trim(),
+          dcNo: srcDcNo,
+          lotNo: srcLotNo,
           requestedQty,
           uomId: sourceUomId,
           uomQuantity: sourceUomQty,
+          perId: sourcePerId,
           rate: sourceRate,
         });
       }
@@ -161,6 +189,10 @@ export class CreateStockTransferUseCase {
         const uomId = destUomRaw ? ((destUomRaw as any)._id || destUomRaw).toString() : undefined;
         const uomQuantity = dest.uomQuantity !== undefined ? Number(dest.uomQuantity) : 1;
 
+        // Resolve Per Unit safely from input or item defaults
+        const destPerRaw = dest.perId || destItem.defaultPerId;
+        const perId = destPerRaw ? ((destPerRaw as any)._id || destPerRaw).toString() : undefined;
+
         const destQty = Number(dest.quantity);
         if (destQty <= 0) {
           throw new HttpException(400, "Destination quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
@@ -168,9 +200,10 @@ export class CreateStockTransferUseCase {
 
         totalDestinationQuantity += destQty;
 
-        const newBatchNo = (dest.batchNo || "").trim();
-        if (!newBatchNo) {
-          throw new HttpException(400, "Destination Batch / Lot number is required", ERROR_CODES.VALIDATION_ERROR);
+        const newDcNo = (dest.dcNo || dest.batchNo || "").trim();
+        const newLotNo = (dest.lotNo || "").trim();
+        if (!newDcNo) {
+          throw new HttpException(400, "Destination DC number is required", ERROR_CODES.VALIDATION_ERROR);
         }
 
         let destRate = Number(dest.rate) || 0;
@@ -181,10 +214,12 @@ export class CreateStockTransferUseCase {
         preparedDestItems.push({
           destGodownId: destGodown._id,
           destItemId: destItem._id,
-          batchNo: newBatchNo,
+          dcNo: newDcNo,
+          lotNo: newLotNo,
           destQty,
           uomId,
           uomQuantity,
+          perId,
           rate: destRate,
         });
       }
@@ -200,12 +235,13 @@ export class CreateStockTransferUseCase {
             src.stockDocId,
             src.requestedQty,
             reqAdmin.userId,
-            session
+            session,
+            src.uomQuantity
           );
           if (!updatedStock) {
             throw new HttpException(
               400,
-              `Could not deduct stock for batch '${src.batchNo || "N/A"}'. Stock may have changed.`,
+              `Could not deduct stock for DC '${src.dcNo || "N/A"}'. Stock may have changed.`,
               ERROR_CODES.INSUFFICIENT_STOCK
             );
           }
@@ -218,12 +254,13 @@ export class CreateStockTransferUseCase {
             itemId: generateObjectId(src.sourceItemId),
             godownId: generateObjectId(src.sourceGodownId),
             companyGodownId: generateObjectId(src.companyGodownId),
-            batchNo: src.batchNo,
+            dcNo: src.dcNo,
+            lotNo: src.lotNo,
             quantity: src.requestedQty,
             rate: src.rate,
-            amount: Number((src.requestedQty * src.rate).toFixed(2)),
             uomId: src.uomId ? generateObjectId(src.uomId) : undefined,
             uomQuantity: src.uomQuantity,
+            perId: src.perId ? generateObjectId(src.perId) : undefined,
           });
         }
 
@@ -240,12 +277,14 @@ export class CreateStockTransferUseCase {
               godownId: dest.destGodownId,
               companyGodownId: destCompanyGodownId,
               itemId: dest.destItemId,
-              batchNo: dest.batchNo,
+              dcNo: dest.dcNo,
+              lotNo: dest.lotNo,
               currentStock: dest.destQty,
               initialStock: dest.destQty,
               rate: dest.rate,
               uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
               uomQuantity: dest.uomQuantity,
+              perId: dest.perId ? generateObjectId(dest.perId) : undefined,
               stockTransferId: transferObjectId,
               sourceType: StockSourceType.TRANSFER,
               createdBy: reqAdmin.userId,
@@ -261,12 +300,13 @@ export class CreateStockTransferUseCase {
             itemId: dest.destItemId,
             godownId: dest.destGodownId,
             companyGodownId: destCompanyGodownId,
-            batchNo: dest.batchNo,
+            dcNo: dest.dcNo,
+            lotNo: dest.lotNo,
             quantity: dest.destQty,
             rate: dest.rate,
-            amount: Number((dest.destQty * dest.rate).toFixed(2)),
             uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
             uomQuantity: dest.uomQuantity,
+            perId: dest.perId ? generateObjectId(dest.perId) : undefined,
             destinationGodownStockId: createdBatchDoc._id,
           });
         }
@@ -275,10 +315,7 @@ export class CreateStockTransferUseCase {
         const seq = await this.counterRepository.getNextSequence("STOCK_TRANSFER_NUMBER", this.logger, session);
         const transferNumber = `ST_${seq.toString().padStart(4, "0")}`;
 
-        const totalSourceAmount = calculatedSourceItems.reduce((acc, it) => acc + (it.amount || 0), 0);
-        const totalDestinationAmount = calculatedDestinationItems.reduce((acc, it) => acc + (it.amount || 0), 0);
-
-        // Create StockTransfer voucher
+        // Create StockTransfer voucher (quantity-only for stock transfers)
         await this.stockTransferRepository.createStockTransfer(
           {
             _id: transferObjectId,
@@ -287,9 +324,7 @@ export class CreateStockTransferUseCase {
             sourceItems: calculatedSourceItems,
             destinationItems: calculatedDestinationItems,
             totalSourceQuantity,
-            totalSourceAmount,
             totalDestinationQuantity,
-            totalDestinationAmount,
             narration: dto.narration?.trim() || "",
             isActive: true,
             createdBy: generateObjectId(reqAdmin.userId) as any,

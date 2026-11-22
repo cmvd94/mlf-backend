@@ -10,10 +10,14 @@ import { generateObjectId } from "@/shared/utils/generateObjectId";
 export interface RawBatchStock {
   itemId: string;
   godownId: string;
-  batchNo: string;
+  dcNo: string;
+  lotNo: string;
+  batchNo?: string;
+  uomQuantity?: number;
   quantity: number;
   value: number;
   rate: number;
+  date?: Date;
 }
 
 @injectable()
@@ -71,7 +75,10 @@ export class StockSummaryRepository {
                 itemId: "$$it.itemId",
                 godownId: { $ifNull: ["$$it.godownId", "$godownId"] },
                 companyGodownId: { $ifNull: ["$$it.companyGodownId", "$companyGodownId"] },
+                dcNo: { $ifNull: ["$$it.dcNo", { $ifNull: ["$$it.batchNo", ""] }] },
+                lotNo: { $ifNull: ["$$it.lotNo", ""] },
                 batchNo: { $ifNull: ["$$it.batchNo", ""] },
+                uomQuantity: { $ifNull: ["$$it.uomQuantity", 0] },
                 actualQuantity: { $ifNull: ["$$it.actualQuantity", 0] },
                 billedQuantity: { $ifNull: ["$$it.billedQuantity", 0] },
                 rate: { $ifNull: ["$$it.rate", 0] },
@@ -88,8 +95,10 @@ export class StockSummaryRepository {
           _id: {
             itemId: "$items.itemId",
             godownId: "$items.godownId",
-            batchNo: { $ifNull: ["$items.batchNo", ""] },
+            dcNo: { $ifNull: ["$items.dcNo", { $ifNull: ["$items.batchNo", ""] }] },
+            lotNo: { $ifNull: ["$items.lotNo", ""] },
           },
+          totalUomQuantity: { $sum: "$items.uomQuantity" },
           totalQuantity: { $sum: "$items.actualQuantity" },
           totalValue: {
             $sum: {
@@ -101,6 +110,7 @@ export class StockSummaryRepository {
             },
           },
           avgRate: { $avg: "$items.rate" },
+          latestDate: { $max: "$date" },
         },
       },
     ];
@@ -108,16 +118,21 @@ export class StockSummaryRepository {
     const rawResults = await PurchaseModel.aggregate(pipeline).exec();
 
     return rawResults.map((r) => {
+      const uomQty = Number(r.totalUomQuantity) || 0;
       const qty = Number(r.totalQuantity) || 0;
       const val = Number(r.totalValue) || 0;
       const rate = qty > 0 ? Number((val / qty).toFixed(2)) : Number((r.avgRate || 0).toFixed(2));
       return {
         itemId: r._id.itemId.toString(),
         godownId: r._id.godownId.toString(),
-        batchNo: (r._id.batchNo || "").trim(),
+        dcNo: (r._id.dcNo || "").trim(),
+        lotNo: (r._id.lotNo || "").trim(),
+        batchNo: (r._id.dcNo || "").trim(),
+        uomQuantity: uomQty,
         quantity: qty,
         value: val,
         rate,
+        date: r.latestDate ? new Date(r.latestDate) : undefined,
       };
     });
   }
@@ -147,6 +162,8 @@ export class StockSummaryRepository {
     return await GodownStockModel.find(query)
       .populate("stockTransferId", "sourceItems destinationItems")
       .populate("purchaseId", "items")
+      .populate("uomId", "name symbol")
+      .populate("perId", "name symbol multiplier")
       .lean()
       .exec();
   }

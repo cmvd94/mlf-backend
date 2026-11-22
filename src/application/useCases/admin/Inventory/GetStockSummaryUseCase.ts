@@ -11,7 +11,7 @@ import {
   StockSummaryBatchDTO,
 } from "@/shared/dto/admin/stockSummaryDTO";
 import { generateGodownQuery, compareAdminAndGodownLocation } from "@/shared/utils/godownQueryHelper";
-import { formatIndianCurrency, formatQuantity, formatRate } from "@/shared/utils/formatUtils";
+import { formatIndianCurrency, formatQuantity, formatRate, formatDate } from "@/shared/utils/formatUtils";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import HttpException from "@/shared/exceptions/HttpException";
@@ -111,11 +111,16 @@ export class GetStockSummaryUseCase {
 
       // Group batch stocks by Item ID
       const itemBatchLinesMap = new Map<string, Map<string, {
-        batchNo: string;
+        dcNo: string;
+        lotNo: string;
+        batchNo?: string;
         godownId: string;
+        uomQuantity?: number;
         quantity: number;
         value: number;
         rate: number;
+        date?: string;
+        formattedDate: string;
       }>>();
 
       const batchRateMap = new Map<string, number>();
@@ -124,25 +129,33 @@ export class GetStockSummaryUseCase {
         if (!itemBatchLinesMap.has(pb.itemId)) {
           itemBatchLinesMap.set(pb.itemId, new Map());
         }
-        const batchKey = `${pb.godownId}_${pb.batchNo}`;
+        const batchKey = `${pb.godownId}_${pb.dcNo}_${pb.lotNo}`;
         const existing = itemBatchLinesMap.get(pb.itemId)!.get(batchKey);
+        const pbDateStr = pb.date ? pb.date.toISOString() : undefined;
+        const pbFormattedDate = formatDate(pb.date);
         if (existing) {
           existing.quantity += pb.quantity;
+          existing.uomQuantity = (existing.uomQuantity || 0) + (pb.uomQuantity || 0);
           existing.value += pb.value;
           existing.rate = existing.quantity > 0 ? Number((existing.value / existing.quantity).toFixed(2)) : pb.rate;
         } else {
           itemBatchLinesMap.get(pb.itemId)!.set(batchKey, {
-            batchNo: pb.batchNo,
+            dcNo: pb.dcNo,
+            lotNo: pb.lotNo,
+            batchNo: pb.dcNo,
             godownId: pb.godownId,
+            uomQuantity: pb.uomQuantity || 0,
             quantity: pb.quantity,
             value: pb.value,
             rate: pb.rate,
+            date: pbDateStr,
+            formattedDate: pbFormattedDate,
           });
         }
 
-        if (pb.batchNo) {
-          batchRateMap.set(`${pb.itemId}_${pb.batchNo}`, pb.rate);
-          batchRateMap.set(pb.batchNo, pb.rate);
+        if (pb.dcNo) {
+          batchRateMap.set(`${pb.itemId}_${pb.dcNo}`, pb.rate);
+          batchRateMap.set(pb.dcNo, pb.rate);
         }
       }
 
@@ -160,26 +173,27 @@ export class GetStockSummaryUseCase {
         }
 
         const batchesForThisItem = itemBatchLinesMap.get(iId)!;
-        const bNo = (gs.batchNo || "").trim();
-        const batchKey = `${gId}_${bNo}`;
+        const dcNo = (gs.dcNo || (gs as any).batchNo || "").trim();
+        const lotNo = (gs.lotNo || "").trim();
+        const batchKey = (gs as any)._id ? (gs as any)._id.toString() : `${gId}_${dcNo}_${lotNo}`;
 
         // Determine unit rate for this batch
         let rate = Number((gs as any).rate) || 0;
         if (rate <= 0) {
-          rate = batchRateMap.get(`${iId}_${bNo}`) || batchRateMap.get(bNo) || 0;
+          rate = batchRateMap.get(`${iId}_${dcNo}`) || batchRateMap.get(dcNo) || 0;
         }
         if (rate <= 0 && (gs as any).stockTransferId) {
           const transfer = (gs as any).stockTransferId;
           if (transfer.destinationItems) {
             const dItem = transfer.destinationItems.find((it: any) =>
-              (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === iId)
+              (it.dcNo && it.dcNo.trim() === dcNo) || (it.batchNo && it.batchNo.trim() === dcNo) || (it.itemId && it.itemId.toString() === iId)
             );
             if (dItem && Number(dItem.rate) > 0) rate = Number(dItem.rate);
           }
           if (rate <= 0 && transfer.sourceItems && transfer.sourceItems.length > 0) {
             for (const sItem of transfer.sourceItems) {
-              const sBatch = (sItem.batchNo || "").trim();
-              const sRate = batchRateMap.get(sBatch) || Number(sItem.rate) || 0;
+              const sDc = (sItem.dcNo || sItem.batchNo || "").trim();
+              const sRate = batchRateMap.get(sDc) || Number(sItem.rate) || 0;
               if (sRate > 0) {
                 rate = sRate;
                 break;
@@ -189,7 +203,7 @@ export class GetStockSummaryUseCase {
         }
         if (rate <= 0 && (gs as any).purchaseId?.items) {
           const pItem = (gs as any).purchaseId.items.find((it: any) =>
-            (it.batchNo && it.batchNo.trim() === bNo) || (it.itemId && it.itemId.toString() === iId)
+            (it.dcNo && it.dcNo.trim() === dcNo) || (it.batchNo && it.batchNo.trim() === dcNo) || (it.itemId && it.itemId.toString() === iId)
           );
           if (pItem) rate = Number(pItem.rate) || 0;
         }
@@ -198,23 +212,43 @@ export class GetStockSummaryUseCase {
         }
 
         const currentStock = Number(gs.currentStock) || 0;
+        const entryDate = (gs as any).createdAt || (gs as any).purchaseId?.date || (gs as any).stockTransferId?.date;
+        const formattedDate = formatDate(entryDate);
+        const isoDate = entryDate ? (entryDate instanceof Date ? entryDate.toISOString() : new Date(entryDate).toISOString()) : undefined;
 
+        // If replacing an un-reconciled purchase batch key with this specific stock document, remove previous generic key
+        const genericKey = `${gId}_${dcNo}_${lotNo}`;
+        if (batchesForThisItem.has(genericKey) && batchKey !== genericKey) {
+          batchesForThisItem.delete(genericKey);
+        }
+
+        const gsUomQty = Number(gs.uomQuantity) || 0;
         if (currentStock > 0) {
           const val = Number((currentStock * rate).toFixed(2));
           batchesForThisItem.set(batchKey, {
-            batchNo: bNo,
+            dcNo,
+            lotNo,
+            batchNo: dcNo,
             godownId: gId,
+            uomQuantity: gsUomQty,
             quantity: currentStock,
             value: val,
             rate: rate,
+            date: isoDate,
+            formattedDate,
           });
         } else if (showZero) {
           batchesForThisItem.set(batchKey, {
-            batchNo: bNo,
+            dcNo,
+            lotNo,
+            batchNo: dcNo,
             godownId: gId,
+            uomQuantity: 0,
             quantity: 0,
             value: 0,
             rate: rate,
+            date: isoDate,
+            formattedDate,
           });
         } else {
           batchesForThisItem.delete(batchKey);
@@ -228,17 +262,22 @@ export class GetStockSummaryUseCase {
         groupCode: string;
         items: StockSummaryItemDTO[];
         totalQuantity: number;
+        totalUomQuantity: number;
         totalValue: number;
         uom: string;
+        uomSymbol: string;
+        perSymbol: string;
       }>();
 
       for (const item of allItems) {
         const iId = item._id.toString();
-        const uomSymbol = item.defaultUomId?.symbol || "kg";
+        const perSymbol = item.defaultPerId?.symbol || "kg";
+        const uomSymbol = item.defaultUomId?.symbol || "BAG";
         const batchesMap = itemBatchLinesMap.get(iId);
 
         const batchDTOs: StockSummaryBatchDTO[] = [];
         let itemQuantity = 0;
+        let itemUomQuantity = 0;
         let itemValue = 0;
 
         if (batchesMap) {
@@ -246,25 +285,39 @@ export class GetStockSummaryUseCase {
             const godownDoc = accessibleGodownMap.get(b.godownId);
             const godownName = godownDoc?.name || "Godown";
             const godownCode = godownDoc?.godownId;
-            const batchLabel = b.batchNo && b.batchNo.trim().length > 0 ? b.batchNo.trim() : "";
-            const particulars = batchLabel.length > 0 ? `${batchLabel} ${godownName}` : godownName;
+            const dcVal = b.dcNo && b.dcNo.trim().length > 0 ? b.dcNo.trim() : (b.batchNo && b.batchNo.trim().length > 0 ? b.batchNo.trim() : "");
+            const lotVal = b.lotNo && b.lotNo.trim().length > 0 ? b.lotNo.trim() : "";
+            const dcLabel = dcVal.length > 0 ? `DC No: ${dcVal}` : "";
+            const lotLabel = lotVal.length > 0 ? `Lot No: ${lotVal}` : "";
+            const parts = [godownName, dcLabel, lotLabel].filter((p) => p && p.length > 0);
+            const particulars = parts.join(" ");
 
+            const bUomQty = Number((b.uomQuantity || 0).toFixed(3));
             itemQuantity += b.quantity;
+            itemUomQuantity += bUomQty;
             itemValue += b.value;
 
             batchDTOs.push({
-              batchNo: batchLabel,
+              dcNo: dcVal,
+              lotNo: lotVal,
+              batchNo: dcVal,
               godownId: b.godownId,
               godownName,
               godownCode,
+              date: b.date,
+              formattedDate: b.formattedDate,
               particulars,
+              uomQuantity: bUomQty,
+              formattedUomQuantity: formatQuantity(bUomQty, uomSymbol),
               quantity: Number(b.quantity.toFixed(3)),
               rate: Number(b.rate.toFixed(2)),
               value: Number(b.value.toFixed(2)),
-              formattedQuantity: formatQuantity(b.quantity, uomSymbol),
+              formattedQuantity: formatQuantity(b.quantity, perSymbol),
               formattedRate: formatRate(b.rate),
               formattedValue: formatIndianCurrency(b.value),
-              uom: uomSymbol,
+              uom: perSymbol,
+              uomSymbol,
+              perSymbol,
             });
           }
         }
@@ -279,7 +332,13 @@ export class GetStockSummaryUseCase {
           : item.standardRate || 0;
 
         // Sort batches by particulars
-        batchDTOs.sort((a, b) => a.particulars.localeCompare(b.particulars));
+        batchDTOs.sort((a, b) => {
+          if (a.date && b.date) {
+            const diff = new Date(b.date).getTime() - new Date(a.date).getTime();
+            if (diff !== 0) return diff;
+          }
+          return a.particulars.localeCompare(b.particulars);
+        });
 
         const itemDTO: StockSummaryItemDTO = {
           itemId: iId,
@@ -287,11 +346,15 @@ export class GetStockSummaryUseCase {
           itemCode: item.itemCode,
           groupId: item.itemGroupId?._id?.toString() || item.itemGroupId?.toString(),
           groupName: item.itemGroupId?.name || "General",
-          uom: uomSymbol,
+          uom: perSymbol,
+          uomSymbol,
+          perSymbol,
           quantity: Number(itemQuantity.toFixed(3)),
+          uomQuantity: Number(itemUomQuantity.toFixed(3)),
           averageRate: avgRate,
           totalValue: Number(itemValue.toFixed(2)),
-          formattedQuantity: formatQuantity(itemQuantity, uomSymbol),
+          formattedQuantity: formatQuantity(itemQuantity, perSymbol),
+          formattedUomQuantity: formatQuantity(itemUomQuantity, uomSymbol),
           formattedRate: formatRate(avgRate),
           formattedValue: formatIndianCurrency(itemValue),
           batchesCount: batchDTOs.length,
@@ -309,20 +372,25 @@ export class GetStockSummaryUseCase {
             groupCode: grpCode,
             items: [],
             totalQuantity: 0,
+            totalUomQuantity: 0,
             totalValue: 0,
-            uom: uomSymbol,
+            uom: perSymbol,
+            uomSymbol,
+            perSymbol,
           });
         }
 
         const grpEntry = groupMap.get(grpId)!;
         grpEntry.items.push(itemDTO);
         grpEntry.totalQuantity += itemQuantity;
+        grpEntry.totalUomQuantity += itemUomQuantity;
         grpEntry.totalValue += itemValue;
       }
 
       // 7. Format Groups and Grand Total
       const groupDTOs: StockSummaryGroupDTO[] = [];
       let grandTotalQty = 0;
+      let grandTotalUomQty = 0;
       let grandTotalVal = 0;
       let totalItemCount = 0;
 
@@ -339,6 +407,7 @@ export class GetStockSummaryUseCase {
         grp.items.sort((a, b) => a.itemName.localeCompare(b.itemName));
 
         grandTotalQty += grp.totalQuantity;
+        grandTotalUomQty += grp.totalUomQuantity;
         grandTotalVal += grp.totalValue;
         totalItemCount += grp.items.length;
 
@@ -347,10 +416,14 @@ export class GetStockSummaryUseCase {
           groupName: grp.groupName,
           groupCode: grp.groupCode,
           uom: grp.uom,
+          uomSymbol: grp.uomSymbol,
+          perSymbol: grp.perSymbol,
           totalQuantity: Number(grp.totalQuantity.toFixed(3)),
+          totalUomQuantity: Number(grp.totalUomQuantity.toFixed(3)),
           averageRate: grpAvgRate,
           totalValue: Number(grp.totalValue.toFixed(2)),
-          formattedQuantity: formatQuantity(grp.totalQuantity, grp.uom),
+          formattedQuantity: formatQuantity(grp.totalQuantity, grp.perSymbol),
+          formattedUomQuantity: formatQuantity(grp.totalUomQuantity, grp.uomSymbol),
           formattedRate: formatRate(grpAvgRate),
           formattedValue: formatIndianCurrency(grp.totalValue),
           itemsCount: grp.items.length,
@@ -379,9 +452,11 @@ export class GetStockSummaryUseCase {
         groups: groupDTOs,
         grandTotal: {
           totalQuantity: Number(grandTotalQty.toFixed(3)),
+          totalUomQuantity: Number(grandTotalUomQty.toFixed(3)),
           averageRate: grandAvgRate,
           totalValue: Number(grandTotalVal.toFixed(2)),
           formattedQuantity: formatQuantity(grandTotalQty, "kg"),
+          formattedUomQuantity: formatQuantity(grandTotalUomQty, "BAG"),
           formattedRate: formatRate(grandAvgRate),
           formattedValue: formatIndianCurrency(grandTotalVal),
           groupsCount: groupDTOs.length,

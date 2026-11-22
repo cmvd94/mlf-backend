@@ -8,11 +8,17 @@ export interface GetStockSummaryQueryDTO {
 }
 
 export interface StockSummaryBatchDTO {
-  batchNo: string;
+  dcNo: string;
+  lotNo: string;
+  batchNo?: string;
   godownId: string;
   godownName: string;
   godownCode?: string;
+  date?: string;
+  formattedDate: string;
   particulars: string; // e.g. "Debit/26-9-26 Nandhi Dyeing" or "L10/dc169/8-10-26 Sv Colony"
+  uomQuantity?: number;
+  formattedUomQuantity?: string;
   quantity: number;
   rate: number;
   value: number;
@@ -20,6 +26,8 @@ export interface StockSummaryBatchDTO {
   formattedRate: string;
   formattedValue: string;
   uom: string;
+  uomSymbol?: string;
+  perSymbol?: string;
 }
 
 export interface StockSummaryItemDTO {
@@ -29,6 +37,10 @@ export interface StockSummaryItemDTO {
   groupId?: string;
   groupName?: string;
   uom: string;
+  uomQuantity?: number;
+  formattedUomQuantity?: string;
+  uomSymbol?: string;
+  perSymbol?: string;
   quantity: number;
   averageRate: number;
   totalValue: number;
@@ -45,6 +57,10 @@ export interface StockSummaryGroupDTO {
   groupCode?: string;
   uom: string;
   totalQuantity: number;
+  totalUomQuantity?: number;
+  formattedUomQuantity?: string;
+  uomSymbol?: string;
+  perSymbol?: string;
   averageRate: number;
   totalValue: number;
   formattedQuantity: string;
@@ -56,9 +72,11 @@ export interface StockSummaryGroupDTO {
 
 export interface StockSummaryGrandTotalDTO {
   totalQuantity: number;
+  totalUomQuantity?: number;
   averageRate: number;
   totalValue: number;
   formattedQuantity: string;
+  formattedUomQuantity?: string;
   formattedRate: string;
   formattedValue: string;
   groupsCount: number;

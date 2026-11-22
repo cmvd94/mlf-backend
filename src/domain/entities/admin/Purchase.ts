@@ -25,7 +25,10 @@ export class PurchaseItem {
   public companyGodownId?: Ref<any>;
 
   @prop({ type: String, trim: true, default: "" })
-  public batchNo!: string;
+  public dcNo!: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public lotNo!: string;
 
   @prop({ ref: () => UnitOfMeasurement, required: true })
   public uomId!: Ref<UnitOfMeasurement>;
@@ -119,7 +122,10 @@ export class Purchase {
   public itemId?: Ref<Item>;
 
   @prop({ type: String, trim: true, default: "" })
-  public batchNo?: string;
+  public dcNo?: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public lotNo?: string;
 
   @prop({ ref: () => UnitOfMeasurement, required: false })
   public uomId?: Ref<UnitOfMeasurement>;
