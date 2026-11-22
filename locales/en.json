@@ -1,10 +1,10 @@
 {
   "CRUDADMIN": {
-    "USER_CREATED": "Admin user created successfully",
-    "USER_UPDATED": "Admin user updated successfully",
-    "USER_DELETED": "Admin user deleted successfully",
+    "USER_CREATED": "User created successfully",
+    "USER_UPDATED": "User updated successfully",
+    "USER_DELETED": "User deleted successfully",
     "QUERIED_USER_LIST": "User list fetched successfully",
-    "USER_FETCHED": "Admin user fetched successfully",
+    "USER_FETCHED": "User fetched successfully",
     "USER_IS_ACTIVE_UPDATED": "User active status updated successfully"
   },
   "ADMIN": {
@@ -92,7 +92,7 @@
     "ADMIN_ROLE_INVALID": "Entered invalid admin role",
     "OTP_EXPIRED": "OTP expired",
     "INCORRECT_OTP": "Incorrect OTP",
-    "USER_CREATION_FAILED": "User creation failed. Internal server error",
+    "USER_CREATION_FAILED": "User creation failed. Please try again.",
     "UNAUTHORIZED": "Your session has expired. Please log in again.",
     "NOT_FOUND": "Resource not found",
     "USER_NOT_FOUND": "User not found",

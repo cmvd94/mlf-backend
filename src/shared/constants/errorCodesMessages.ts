@@ -136,7 +136,7 @@ export const ERROR_MESSAGES = {
   ADMIN_ROLE_INVALID: "Entered invalid admin role",
   OTP_EXPIRED: "OTP expired",
   INCORRECT_OTP: "Incorrect OTP",
-  USER_CREATION_FAILED: "User creation failed. Internal server error",
+  USER_CREATION_FAILED: "User creation failed. Please try again.",
   UNAUTHORIZED: "Your session has expired. Please log in again.",
   NOT_FOUND: "Resource not found",
   USER_NOT_FOUND: "User not found",
