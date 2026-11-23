@@ -27,6 +27,7 @@ export enum AdminErrorStage {
   PurchaseController = "PurchaseController",
   PartyUseCase = "PartyUseCase",
   PurchaseTypeUseCase = "PurchaseTypeUseCase",
+  SalesTypeUseCase = "SalesTypeUseCase",
   UomUseCase = "UomUseCase",
   PerUnitUseCase = "PerUnitUseCase",
   ItemGroupUseCase = "ItemGroupUseCase",
@@ -36,4 +37,6 @@ export enum AdminErrorStage {
   StockSummaryController = "StockSummaryController",
   StockTransferUseCase = "StockTransferUseCase",
   StockTransferController = "StockTransferController",
+  SaleUseCase = "SaleUseCase",
+  SaleController = "SaleController",
 }

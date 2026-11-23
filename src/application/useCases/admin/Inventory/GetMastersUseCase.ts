@@ -2,6 +2,7 @@ import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 import { PartyRepository } from "@/infrastructure/repositories/admin/PartyRepository";
 import { PurchaseTypeRepository } from "@/infrastructure/repositories/admin/PurchaseTypeRepository";
+import { SalesTypeRepository } from "@/infrastructure/repositories/admin/SalesTypeRepository";
 import { UomRepository } from "@/infrastructure/repositories/admin/UomRepository";
 import { PerUnitRepository } from "@/infrastructure/repositories/admin/PerUnitRepository";
 import { ItemGroupRepository } from "@/infrastructure/repositories/admin/ItemGroupRepository";
@@ -18,6 +19,7 @@ export class GetMastersUseCase {
   constructor(
     @inject(PartyRepository) private partyRepository: PartyRepository,
     @inject(PurchaseTypeRepository) private purchaseTypeRepository: PurchaseTypeRepository,
+    @inject(SalesTypeRepository) private salesTypeRepository: SalesTypeRepository,
     @inject(UomRepository) private uomRepository: UomRepository,
     @inject(PerUnitRepository) private perUnitRepository: PerUnitRepository,
     @inject(ItemGroupRepository) private itemGroupRepository: ItemGroupRepository,
@@ -34,9 +36,10 @@ export class GetMastersUseCase {
         accessibleGodownsQuery = hasAccess ? query : null;
       }
 
-      const [parties, purchaseTypes, uoms, perUnits, itemGroups, items, godowns] = await Promise.all([
+      const [parties, purchaseTypes, salesTypes, uoms, perUnits, itemGroups, items, godowns] = await Promise.all([
         this.partyRepository.getAllActiveParties(),
         this.purchaseTypeRepository.getAllActivePurchaseTypes(),
+        this.salesTypeRepository.getAllActiveSalesTypes(),
         this.uomRepository.getAllActiveUoms(),
         this.perUnitRepository.getAllActivePerUnits(),
         this.itemGroupRepository.getAllActiveItemGroups(),
@@ -49,6 +52,7 @@ export class GetMastersUseCase {
       return {
         parties,
         purchaseTypes,
+        salesTypes,
         uoms,
         perUnits,
         itemGroups,

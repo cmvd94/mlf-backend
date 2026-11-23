@@ -23,6 +23,7 @@ import { GetGodownStockUseCase } from "@/application/useCases/admin/Godown/GetGo
 import { GodownController } from "@/interfaces/controllers/admin/GodownController";
 import { PartyRepository } from "@/infrastructure/repositories/admin/PartyRepository";
 import { PurchaseTypeRepository } from "@/infrastructure/repositories/admin/PurchaseTypeRepository";
+import { SalesTypeRepository } from "@/infrastructure/repositories/admin/SalesTypeRepository";
 import { UomRepository } from "@/infrastructure/repositories/admin/UomRepository";
 import { PerUnitRepository } from "@/infrastructure/repositories/admin/PerUnitRepository";
 import { ItemGroupRepository } from "@/infrastructure/repositories/admin/ItemGroupRepository";
@@ -41,6 +42,12 @@ import {
   DeletePurchaseTypeUseCase,
   GetPurchaseTypeListUseCase,
 } from "@/application/useCases/admin/Inventory/PurchaseTypeUseCases";
+import {
+  CreateSalesTypeUseCase,
+  UpdateSalesTypeUseCase,
+  DeleteSalesTypeUseCase,
+  GetSalesTypeListUseCase,
+} from "@/application/useCases/admin/Inventory/SalesTypeUseCases";
 import {
   CreateUomUseCase,
   UpdateUomUseCase,
@@ -84,6 +91,16 @@ import { GetStockTransferListUseCase } from "@/application/useCases/admin/StockT
 import { GetStockTransferByIdUseCase } from "@/application/useCases/admin/StockTransfer/GetStockTransferByIdUseCase";
 import { GetAvailableStockForTransferUseCase } from "@/application/useCases/admin/StockTransfer/GetAvailableStockForTransferUseCase";
 import { StockTransferController } from "@/interfaces/controllers/admin/StockTransferController";
+import { SaleRepository } from "@/infrastructure/repositories/admin/SaleRepository";
+import { CreateSaleUseCase } from "@/application/useCases/admin/Sale/CreateSaleUseCase";
+import { UpdateSaleUseCase } from "@/application/useCases/admin/Sale/UpdateSaleUseCase";
+import { GetSaleListUseCase } from "@/application/useCases/admin/Sale/GetSaleListUseCase";
+import {
+  GetSaleByIdUseCase,
+  DeleteSaleUseCase,
+} from "@/application/useCases/admin/Sale/SaleDetailsUseCases";
+import { GetAvailableStockForSaleUseCase } from "@/application/useCases/admin/Sale/GetAvailableStockForSaleUseCase";
+import { SaleController } from "@/interfaces/controllers/admin/SaleController";
 
 export const initAdminDI = () => {
   container.registerSingleton(AdminRepository, AdminRepository);
@@ -91,6 +108,7 @@ export const initAdminDI = () => {
   container.registerSingleton(GodownRepository, GodownRepository);
   container.registerSingleton(PartyRepository, PartyRepository);
   container.registerSingleton(PurchaseTypeRepository, PurchaseTypeRepository);
+  container.registerSingleton(SalesTypeRepository, SalesTypeRepository);
   container.registerSingleton(UomRepository, UomRepository);
   container.registerSingleton(PerUnitRepository, PerUnitRepository);
   container.registerSingleton(ItemGroupRepository, ItemGroupRepository);
@@ -99,6 +117,7 @@ export const initAdminDI = () => {
   container.registerSingleton(GodownStockRepository, GodownStockRepository);
   container.registerSingleton(StockSummaryRepository, StockSummaryRepository);
   container.registerSingleton(StockTransferRepository, StockTransferRepository);
+  container.registerSingleton(SaleRepository, SaleRepository);
 
   container.registerSingleton(CreateUserUseCase, CreateUserUseCase);
   container.registerSingleton(UpdateUserUseCase, UpdateUserUseCase);
@@ -128,6 +147,11 @@ export const initAdminDI = () => {
   container.registerSingleton(UpdatePurchaseTypeUseCase, UpdatePurchaseTypeUseCase);
   container.registerSingleton(DeletePurchaseTypeUseCase, DeletePurchaseTypeUseCase);
   container.registerSingleton(GetPurchaseTypeListUseCase, GetPurchaseTypeListUseCase);
+
+  container.registerSingleton(CreateSalesTypeUseCase, CreateSalesTypeUseCase);
+  container.registerSingleton(UpdateSalesTypeUseCase, UpdateSalesTypeUseCase);
+  container.registerSingleton(DeleteSalesTypeUseCase, DeleteSalesTypeUseCase);
+  container.registerSingleton(GetSalesTypeListUseCase, GetSalesTypeListUseCase);
 
   container.registerSingleton(CreateUomUseCase, CreateUomUseCase);
   container.registerSingleton(UpdateUomUseCase, UpdateUomUseCase);
@@ -159,6 +183,12 @@ export const initAdminDI = () => {
   container.registerSingleton(GetStockTransferListUseCase, GetStockTransferListUseCase);
   container.registerSingleton(GetStockTransferByIdUseCase, GetStockTransferByIdUseCase);
   container.registerSingleton(GetAvailableStockForTransferUseCase, GetAvailableStockForTransferUseCase);
+  container.registerSingleton(CreateSaleUseCase, CreateSaleUseCase);
+  container.registerSingleton(UpdateSaleUseCase, UpdateSaleUseCase);
+  container.registerSingleton(GetSaleListUseCase, GetSaleListUseCase);
+  container.registerSingleton(GetSaleByIdUseCase, GetSaleByIdUseCase);
+  container.registerSingleton(DeleteSaleUseCase, DeleteSaleUseCase);
+  container.registerSingleton(GetAvailableStockForSaleUseCase, GetAvailableStockForSaleUseCase);
 
   container.registerSingleton(CRUDAdminUserController, CRUDAdminUserController);
   container.registerSingleton(AdminStaticDataController, AdminStaticDataController);
@@ -167,4 +197,5 @@ export const initAdminDI = () => {
   container.registerSingleton(PurchaseController, PurchaseController);
   container.registerSingleton(StockSummaryController, StockSummaryController);
   container.registerSingleton(StockTransferController, StockTransferController);
+  container.registerSingleton(SaleController, SaleController);
 };

@@ -8,6 +8,7 @@ import { AccountInventoryController } from "@/interfaces/controllers/admin/Accou
 import { PurchaseController } from "@/interfaces/controllers/admin/PurchaseController";
 import { StockSummaryController } from "@/interfaces/controllers/admin/StockSummaryController";
 import { StockTransferController } from "@/interfaces/controllers/admin/StockTransferController";
+import { SaleController } from "@/interfaces/controllers/admin/SaleController";
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { CreateUserUseCase } from "@/application/useCases/admin/CRUDAdminUser/CreateUserUseCase";
 import { initLoggerDI } from "./initRegisterLoggerDI";
@@ -28,3 +29,4 @@ export const accountInventoryController = container.resolve(AccountInventoryCont
 export const purchaseController = container.resolve(PurchaseController);
 export const stockSummaryController = container.resolve(StockSummaryController);
 export const stockTransferController = container.resolve(StockTransferController);
+export const saleController = container.resolve(SaleController);

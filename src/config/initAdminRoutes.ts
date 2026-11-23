@@ -9,6 +9,7 @@ import {
   purchaseController,
   stockSummaryController,
   stockTransferController,
+  saleController,
 } from "./di/initResolveDependencies";
 
 export const initAdminRoutes = (app: Application) => {
@@ -21,5 +22,6 @@ export const initAdminRoutes = (app: Application) => {
     purchaseController,
     stockSummaryController,
     stockTransferController,
+    saleController,
   ]);
 };

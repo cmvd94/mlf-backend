@@ -36,6 +36,11 @@
     "PURCHASE_TYPE_DELETED": "Purchase type deleted successfully",
     "PURCHASE_TYPE_FETCHED": "Purchase type fetched successfully",
     "PURCHASE_TYPE_LIST_FETCHED": "Purchase type list fetched successfully",
+    "SALES_TYPE_CREATED": "Sales type created successfully",
+    "SALES_TYPE_UPDATED": "Sales type updated successfully",
+    "SALES_TYPE_DELETED": "Sales type deleted successfully",
+    "SALES_TYPE_FETCHED": "Sales type fetched successfully",
+    "SALES_TYPE_LIST_FETCHED": "Sales type list fetched successfully",
     "UOM_CREATED": "Unit of measurement created successfully",
     "UOM_UPDATED": "Unit of measurement updated successfully",
     "UOM_DELETED": "Unit of measurement deleted successfully",
@@ -75,6 +80,14 @@
     "FETCHED": "Stock transfer fetched successfully",
     "LIST_FETCHED": "Stock transfers fetched successfully",
     "AVAILABLE_STOCK_FETCHED": "Available stocks fetched successfully"
+  },
+  "SALE": {
+    "CREATED": "Sale entry recorded successfully and stock updated",
+    "UPDATED": "Sale entry updated successfully and stock reconciled",
+    "DELETED": "Sale entry deleted successfully and stock reverted",
+    "FETCHED": "Sale entry fetched successfully",
+    "LIST_FETCHED": "Sales list fetched successfully",
+    "AVAILABLE_STOCK_FETCHED": "Available stocks for sale fetched successfully"
   },
   "ERRORS": {
     "INTERNAL_SERVER_ERROR": "Something went wrong. Please try again in a moment.",

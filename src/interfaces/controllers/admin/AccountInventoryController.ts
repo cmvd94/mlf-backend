@@ -34,6 +34,11 @@ import {
   DeletePurchaseTypeRouteSchema,
 } from "@/shared/validation/admin/inventory/purchaseTypeValidation";
 import {
+  CreateSalesTypeRouteSchema,
+  UpdateSalesTypeRouteSchema,
+  DeleteSalesTypeRouteSchema,
+} from "@/shared/validation/admin/inventory/salesTypeValidation";
+import {
   CreateUomRouteSchema,
   UpdateUomRouteSchema,
   DeleteUomRouteSchema,
@@ -67,6 +72,12 @@ import {
   GetPurchaseTypeListUseCase,
 } from "@/application/useCases/admin/Inventory/PurchaseTypeUseCases";
 import {
+  CreateSalesTypeUseCase,
+  UpdateSalesTypeUseCase,
+  DeleteSalesTypeUseCase,
+  GetSalesTypeListUseCase,
+} from "@/application/useCases/admin/Inventory/SalesTypeUseCases";
+import {
   CreateUomUseCase,
   UpdateUomUseCase,
   DeleteUomUseCase,
@@ -97,6 +108,12 @@ import {
   UpdatePartyDTO,
   CreatePurchaseTypeDTO,
   UpdatePurchaseTypeDTO,
+} from "@/shared/dto/admin/inventoryDTO";
+import {
+  CreateSalesTypeDTO,
+  UpdateSalesTypeDTO,
+} from "@/shared/dto/admin/salesTypeDTO";
+import {
   CreateUomDTO,
   UpdateUomDTO,
   CreatePerUnitDTO,
@@ -121,6 +138,10 @@ export class AccountInventoryController {
     @inject(UpdatePurchaseTypeUseCase) private updatePurchaseTypeUseCase: UpdatePurchaseTypeUseCase,
     @inject(DeletePurchaseTypeUseCase) private deletePurchaseTypeUseCase: DeletePurchaseTypeUseCase,
     @inject(GetPurchaseTypeListUseCase) private getPurchaseTypeListUseCase: GetPurchaseTypeListUseCase,
+    @inject(CreateSalesTypeUseCase) private createSalesTypeUseCase: CreateSalesTypeUseCase,
+    @inject(UpdateSalesTypeUseCase) private updateSalesTypeUseCase: UpdateSalesTypeUseCase,
+    @inject(DeleteSalesTypeUseCase) private deleteSalesTypeUseCase: DeleteSalesTypeUseCase,
+    @inject(GetSalesTypeListUseCase) private getSalesTypeListUseCase: GetSalesTypeListUseCase,
     @inject(CreateUomUseCase) private createUomUseCase: CreateUomUseCase,
     @inject(UpdateUomUseCase) private updateUomUseCase: UpdateUomUseCase,
     @inject(DeleteUomUseCase) private deleteUomUseCase: DeleteUomUseCase,
@@ -305,6 +326,82 @@ export class AccountInventoryController {
     try {
       const result = await this.getPurchaseTypeListUseCase.execute(query);
       res.status(200).json(sendResponse(req, "INVENTORY.PURCHASE_TYPE_LIST_FETCHED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  // ---------------- Sales Type CRUD ----------------
+  @Post("/sales-type/create")
+  @ValidateSchema(CreateSalesTypeRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async createSalesType(
+    @Body() body: CreateSalesTypeDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.createSalesTypeUseCase.execute(body, reqAdmin);
+      res.status(200).json(sendResponse(req, "INVENTORY.SALES_TYPE_CREATED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  @Patch("/sales-type/update/:id")
+  @ValidateSchema(UpdateSalesTypeRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async updateSalesType(
+    @Params() params: { id: string },
+    @Body() body: UpdateSalesTypeDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.updateSalesTypeUseCase.execute(params.id, body, reqAdmin);
+      res.status(200).json(sendResponse(req, "INVENTORY.SALES_TYPE_UPDATED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  @Delete("/sales-type/delete/:id")
+  @ValidateSchema(DeleteSalesTypeRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async deleteSalesType(
+    @Params() params: { id: string },
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.deleteSalesTypeUseCase.execute(params.id, reqAdmin);
+      res.status(200).json(sendResponse(req, "INVENTORY.SALES_TYPE_DELETED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  @Get("/sales-type/list")
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async getSalesTypeList(
+    @Query() query: InventoryQueryDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.getSalesTypeListUseCase.execute(query);
+      res.status(200).json(sendResponse(req, "INVENTORY.SALES_TYPE_LIST_FETCHED", this.logger, result));
     } catch (error) {
       sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
     }

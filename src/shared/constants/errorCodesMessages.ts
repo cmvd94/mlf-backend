@@ -95,6 +95,8 @@ export const ERROR_CODES = {
   PARTY_CODE_ALREADY_EXISTS: "PARTY_CODE_ALREADY_EXISTS",
   PURCHASE_TYPE_NOT_FOUND: "PURCHASE_TYPE_NOT_FOUND",
   PURCHASE_TYPE_NAME_ALREADY_EXISTS: "PURCHASE_TYPE_NAME_ALREADY_EXISTS",
+  SALES_TYPE_NOT_FOUND: "SALES_TYPE_NOT_FOUND",
+  SALES_TYPE_NAME_ALREADY_EXISTS: "SALES_TYPE_NAME_ALREADY_EXISTS",
   UOM_NOT_FOUND: "UOM_NOT_FOUND",
   UOM_NAME_ALREADY_EXISTS: "UOM_NAME_ALREADY_EXISTS",
   UOM_SYMBOL_ALREADY_EXISTS: "UOM_SYMBOL_ALREADY_EXISTS",
@@ -115,6 +117,10 @@ export const ERROR_CODES = {
   STOCK_TRANSFER_NOT_FOUND: "STOCK_TRANSFER_NOT_FOUND",
   TRANSFER_NUMBER_ALREADY_EXISTS: "TRANSFER_NUMBER_ALREADY_EXISTS",
   INSUFFICIENT_STOCK: "INSUFFICIENT_STOCK",
+
+  // Sales Specific
+  SALE_NOT_FOUND: "SALE_NOT_FOUND",
+  SALES_NUMBER_ALREADY_EXISTS: "SALES_NUMBER_ALREADY_EXISTS",
 };
 
 export const ERROR_MESSAGES = {
@@ -215,6 +221,8 @@ export const ERROR_MESSAGES = {
   PARTY_CODE_ALREADY_EXISTS: "Party code already exists",
   PURCHASE_TYPE_NOT_FOUND: "Purchase type not found",
   PURCHASE_TYPE_NAME_ALREADY_EXISTS: "Purchase type with this name already exists",
+  SALES_TYPE_NOT_FOUND: "Sales type not found",
+  SALES_TYPE_NAME_ALREADY_EXISTS: "Sales type with this name already exists",
   UOM_NOT_FOUND: "Unit of measurement not found",
   UOM_NAME_ALREADY_EXISTS: "Unit of measurement with this name already exists",
   UOM_SYMBOL_ALREADY_EXISTS: "Unit of measurement with this symbol already exists",
@@ -235,4 +243,8 @@ export const ERROR_MESSAGES = {
   STOCK_TRANSFER_NOT_FOUND: "Stock transfer not found",
   TRANSFER_NUMBER_ALREADY_EXISTS: "Transfer number already exists",
   INSUFFICIENT_STOCK: "Insufficient stock available for this operation",
+
+  // Sales Specific
+  SALE_NOT_FOUND: "Sale not found",
+  SALES_NUMBER_ALREADY_EXISTS: "Sales number already exists",
 };

@@ -131,4 +131,14 @@ export class PartyRepository {
       .sort({ name: 1 })
       .lean();
   }
+
+  async findPartiesByNameOrCode(term: string) {
+    const regex = { $regex: term, $options: "i" };
+    return await PartyModel.find({
+      isDeleted: false,
+      $or: [{ name: regex }, { partyCode: regex }],
+    })
+      .select("_id")
+      .lean();
+  }
 }
