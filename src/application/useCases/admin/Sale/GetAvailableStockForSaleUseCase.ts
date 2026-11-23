@@ -102,21 +102,34 @@ export class GetAvailableStockForSaleUseCase {
           rate = Number(s.itemId.standardRate) || 0;
         }
 
+        const qty = Number(s.currentStock) || 0;
+        const amount = Number((qty * rate).toFixed(2));
+
         return {
-          _id: s._id,
-          godownId: s.godownId,
-          companyGodownId: s.companyGodownId || s.godownId,
-          itemId: s.itemId,
+          godownStockId: s._id.toString(),
+          godownId: s.godownId?._id?.toString() || s.godownId?.toString() || "",
+          godownName: s.godownId?.name || "Unknown Godown",
+          godownCode: s.godownId?.code || s.godownId?.godownId || "",
+          companyGodownId: s.companyGodownId?._id?.toString() || s.companyGodownId?.toString() || "",
+          companyGodownName: s.companyGodownId?.name || "",
+          companyGodownCode: s.companyGodownId?.godownId || "",
+          itemId: itId,
+          itemName: s.itemId?.name || "Unknown Item",
+          itemCode: s.itemId?.itemCode || "",
           dcNo,
           lotNo,
-          currentStock: s.currentStock,
-          initialStock: s.initialStock,
-          uomId: s.uomId,
-          uomQuantity: s.uomQuantity,
-          perId: s.perId,
+          batchNo: dcNo,
+          currentStock: qty,
           rate,
-          sourceType: s.sourceType,
-          createdAt: s.createdAt,
+          amount,
+          uomId: s.uomId?._id?.toString() || s.uomId?.toString() || "",
+          uomName: s.uomId?.name || "",
+          uomSymbol: s.uomId?.symbol || "",
+          uomQuantity: s.uomQuantity || 1,
+          perId: s.perId?._id?.toString() || s.perId?.toString() || s.itemId?.defaultPerId?._id?.toString() || s.itemId?.defaultPerId?.toString() || "",
+          perName: s.perId?.name || s.itemId?.defaultPerId?.name || "",
+          perSymbol: s.perId?.symbol || s.itemId?.defaultPerId?.symbol || "",
+          perMultiplier: s.perId?.multiplier || s.itemId?.defaultPerId?.multiplier || 1,
         };
       });
     } catch (error) {

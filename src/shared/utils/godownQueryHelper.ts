@@ -49,20 +49,40 @@ export const generateGodownQuery = (
 
   switch (reqAdmin.role) {
     case AdminRole.GODOWN_MANAGER:
+      if (hasAccess) {
+        const assignedGodowns = reqAdmin.godownId || [];
+        const adminObjId = generateObjectId(reqAdmin.userId);
+        const assignmentConditions: any[] = [{ godownManagerId: adminObjId }];
+        if (assignedGodowns.length > 0) {
+          assignmentConditions.push({ _id: { $in: assignedGodowns.map((id) => generateObjectId(id)) } });
+        }
+        query.$or = assignmentConditions;
+        query.country = scope.country;
+        query.zone = scope.zone;
+        query.state = scope.state;
+        query.district = scope.district;
+      }
+      break;
+
     case AdminRole.SUPERVISOR:
     case AdminRole.ASSISTANT:
     case AdminRole.BILLING_USER:
       if (hasAccess) {
         const assignedGodowns = reqAdmin.godownId || [];
+        const adminObjId = generateObjectId(reqAdmin.userId);
+        const assignmentConditions: any[] = [
+          { supervisorId: adminObjId },
+          { assistantId: adminObjId },
+          { billingUserId: adminObjId },
+        ];
         if (assignedGodowns.length > 0) {
-          query._id = { $in: assignedGodowns.map((id) => generateObjectId(id)) };
-          query.country = scope.country;
-          query.zone = scope.zone;
-          query.state = scope.state;
-          query.district = scope.district;
-        } else {
-          hasAccess = false;
+          assignmentConditions.push({ _id: { $in: assignedGodowns.map((id) => generateObjectId(id)) } });
         }
+        query.$or = assignmentConditions;
+        query.country = scope.country;
+        query.zone = scope.zone;
+        query.state = scope.state;
+        query.district = scope.district;
       }
       break;
 
@@ -197,11 +217,16 @@ export const validateStockModificationAccess = (
         return false;
       }
 
-      if (scope.district && scope.district !== godown.district) return false;
-      if (scope.state && scope.state !== godown.state) return false;
-      if (scope.zone && scope.zone !== godown.zone) return false;
-      if (scope.country && scope.country !== godown.country) return false;
-      return true;
+      return Boolean(
+        scope.country &&
+          scope.zone &&
+          scope.state &&
+          scope.district &&
+          scope.country === godown.country &&
+          scope.zone === godown.zone &&
+          scope.state === godown.state &&
+          scope.district === godown.district
+      );
     }
 
     case AdminRole.SUPERVISOR:
@@ -234,11 +259,16 @@ export const validateStockModificationAccess = (
         return false;
       }
 
-      if (scope.district && scope.district !== godown.district) return false;
-      if (scope.state && scope.state !== godown.state) return false;
-      if (scope.zone && scope.zone !== godown.zone) return false;
-      if (scope.country && scope.country !== godown.country) return false;
-      return true;
+      return Boolean(
+        scope.country &&
+          scope.zone &&
+          scope.state &&
+          scope.district &&
+          scope.country === godown.country &&
+          scope.zone === godown.zone &&
+          scope.state === godown.state &&
+          scope.district === godown.district
+      );
     }
 
     default:
