@@ -14,6 +14,9 @@ export const AdminAccessScope = {
         Chennai: {
           pincodes: [],
         },
+        Palladam: {
+          pincodes: [],
+        },
       },
       Kerala: {
         Thrissur: {

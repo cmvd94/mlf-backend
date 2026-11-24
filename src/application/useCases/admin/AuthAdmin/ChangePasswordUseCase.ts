@@ -9,6 +9,7 @@ import { ChangePasswordDTO } from "@/shared/validation/admin/auth/ChangePassword
 import HttpException from "@/shared/exceptions/HttpException";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { generateObjectId } from "@/shared/utils/generateObjectId";
+import { withTransaction } from "@/shared/utils/withTransaction";
 import bcrypt from "bcryptjs";
 import { Types } from "mongoose";
 import { inject, injectable } from "tsyringe";
@@ -65,20 +66,31 @@ export class ChangePasswordUseCase {
       }
 
       const hashedNewPassword = await bcrypt.hash(dto.newPassword, 10);
-
-      await this.adminRepository.updatePassword(
-        userId,
-        hashedNewPassword,
-        new Types.ObjectId(userId)
-      );
-
-      // Clean up previous sessions
       const userObjectId = generateObjectId(userId);
-      if (userObjectId) {
-        await this.adminSessionRepository.removeAllSessions(userObjectId);
+      if (!userObjectId) {
+        throw new HttpException(
+          400,
+          ERROR_MESSAGES.INVALID_ID,
+          ERROR_CODES.INVALID_ID
+        );
       }
 
-      this.logger.info(`Password successfully changed for admin: ${userId}`);
+      // Update password and logout all active sessions atomically
+      await withTransaction(async (session) => {
+        await this.adminRepository.updatePassword(
+          userId,
+          hashedNewPassword,
+          userObjectId,
+          session
+        );
+
+        await this.adminSessionRepository.removeAllSessions(
+          userObjectId,
+          session
+        );
+      });
+
+      this.logger.info(`Password successfully changed and all sessions logged out for admin: ${userId}`);
 
       return {};
     } catch (error) {

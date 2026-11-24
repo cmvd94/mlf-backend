@@ -7,7 +7,8 @@ import {
   ERROR_MESSAGES,
 } from "@/shared/constants/errorCodesMessages";
 import HttpException from "@/shared/exceptions/HttpException";
-import { Types } from "mongoose";
+import { generateObjectId } from "@/shared/utils/generateObjectId";
+import { ClientSession, Types } from "mongoose";
 import { injectable } from "tsyringe";
 
 @injectable()
@@ -81,15 +82,32 @@ export class AdminSessionRepository {
         );
       }
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new Error(
         `[Admin Session REPOSITORY]: Failed to remove Admin session document by ID. Error object: ${error}`
       );
     }
   };
 
-  removeAllSessions = async (userId: Types.ObjectId) => {
+  removeAllSessions = async (
+    userId: Types.ObjectId | string,
+    session?: ClientSession
+  ) => {
     try {
-      await AdminSessionModel.deleteOne({ userId: userId }).exec();
+      const userObjectId =
+        typeof userId === "string" ? generateObjectId(userId) : userId;
+      const query = {
+        $or: [
+          ...(userObjectId ? [{ userId: userObjectId }] : []),
+          { userId: userId.toString() },
+        ],
+      };
+      await AdminSessionModel.deleteMany(
+        query,
+        session ? { session } : {}
+      ).exec();
     } catch (error) {
       throw new Error(
         `[Admin Session REPOSITORY]: Failed to remove all Admin session documents. Error object: ${error}`

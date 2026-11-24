@@ -33,6 +33,7 @@ export const ERROR_CODES = {
   INVALID_ACCESS_SCOPE: "INVALID_ACCESS_SCOPE",
   INVALID_ACCESS_SCOPE_POLICY: "INVALID_ACCESS_SCOPE_POLICY",
   USER_ASSIGNED_TO_WAREHOUSE: "USER_ASSIGNED_TO_WAREHOUSE",
+  USER_ASSIGNED_TO_GODOWN: "USER_ASSIGNED_TO_GODOWN",
   NEW_USER_ACCESS_SCOPE_NOT_MATCH: "NEW_USER_ACCESS_SCOPE_NOT_MATCH",
   UPDATE_USER_ACCESS_SCOPE_NOT_MATCH: "UPDATE_USER_ACCESS_SCOPE_NOT_MATCH",
   DELETE_USER_ACCESS_SCOPE_NOT_MATCH: "DELETE_USER_ACCESS_SCOPE_NOT_MATCH",
@@ -56,6 +57,78 @@ export const ERROR_CODES = {
   NEW_PASSWORD_CANNOT_BE_SAME: "NEW_PASSWORD_CANNOT_BE_SAME",
   PASSWORD_REQUIRED: "PASSWORD_REQUIRED",
   USER_CREATION_FAILED: "USER_CREATION_FAILED",
+
+  // Godown Specific
+  GODOWN_NOT_FOUND: "GODOWN_NOT_FOUND",
+  GODOWN_ALREADY_EXISTS: "GODOWN_ALREADY_EXISTS",
+  GODOWN_NAME_ALREADY_EXISTS: "GODOWN_NAME_ALREADY_EXISTS",
+  GODOWN_ID_ALREADY_EXISTS: "GODOWN_ID_ALREADY_EXISTS",
+  GODOWN_INVALID_LOCATION: "GODOWN_INVALID_LOCATION",
+  GODOWN_ACCESS_SCOPE_NOT_MATCH_WITH_ADMIN: "GODOWN_ACCESS_SCOPE_NOT_MATCH_WITH_ADMIN",
+  GODOWN_MANAGER_NOT_FOUND: "GODOWN_MANAGER_NOT_FOUND",
+  GODOWN_MANAGER_DISABLED: "GODOWN_MANAGER_DISABLED",
+  GODOWN_MANAGER_ROLE_INVALID: "GODOWN_MANAGER_ROLE_INVALID",
+  GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH: "GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH",
+  GODOWN_SUPERVISOR_NOT_FOUND: "GODOWN_SUPERVISOR_NOT_FOUND",
+  GODOWN_SUPERVISOR_DISABLED: "GODOWN_SUPERVISOR_DISABLED",
+  GODOWN_SUPERVISOR_ROLE_INVALID: "GODOWN_SUPERVISOR_ROLE_INVALID",
+  GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH: "GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH",
+  GODOWN_ASSISTANT_NOT_FOUND: "GODOWN_ASSISTANT_NOT_FOUND",
+  GODOWN_ASSISTANT_DISABLED: "GODOWN_ASSISTANT_DISABLED",
+  GODOWN_ASSISTANT_ROLE_INVALID: "GODOWN_ASSISTANT_ROLE_INVALID",
+  GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH: "GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH",
+  GODOWN_BILLING_USER_NOT_FOUND: "GODOWN_BILLING_USER_NOT_FOUND",
+  GODOWN_BILLING_USER_DISABLED: "GODOWN_BILLING_USER_DISABLED",
+  GODOWN_BILLING_USER_ROLE_INVALID: "GODOWN_BILLING_USER_ROLE_INVALID",
+  GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH: "GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH",
+  GODOWN_DELETE_FAILED: "GODOWN_DELETE_FAILED",
+  JOBWORK_GODOWN_ADMIN_NOT_ALLOWED: "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED",
+  GODOWN_ACCESS_DENIED: "GODOWN_ACCESS_DENIED",
+  GODOWN_INACTIVE: "GODOWN_INACTIVE",
+  COMPANY_GODOWN_REQUIRED: "COMPANY_GODOWN_REQUIRED",
+  COMPANY_GODOWN_INVALID: "COMPANY_GODOWN_INVALID",
+  STOCK_MODIFICATION_DENIED: "STOCK_MODIFICATION_DENIED",
+
+  // Inventory & Masters Specific
+  PARTY_NOT_FOUND: "PARTY_NOT_FOUND",
+  PARTY_NAME_ALREADY_EXISTS: "PARTY_NAME_ALREADY_EXISTS",
+  PARTY_CODE_ALREADY_EXISTS: "PARTY_CODE_ALREADY_EXISTS",
+  PURCHASE_TYPE_NOT_FOUND: "PURCHASE_TYPE_NOT_FOUND",
+  PURCHASE_TYPE_NAME_ALREADY_EXISTS: "PURCHASE_TYPE_NAME_ALREADY_EXISTS",
+  SALES_TYPE_NOT_FOUND: "SALES_TYPE_NOT_FOUND",
+  SALES_TYPE_NAME_ALREADY_EXISTS: "SALES_TYPE_NAME_ALREADY_EXISTS",
+  UOM_NOT_FOUND: "UOM_NOT_FOUND",
+  UOM_NAME_ALREADY_EXISTS: "UOM_NAME_ALREADY_EXISTS",
+  UOM_SYMBOL_ALREADY_EXISTS: "UOM_SYMBOL_ALREADY_EXISTS",
+  PER_UNIT_NOT_FOUND: "PER_UNIT_NOT_FOUND",
+  PER_UNIT_NAME_ALREADY_EXISTS: "PER_UNIT_NAME_ALREADY_EXISTS",
+  ITEM_GROUP_NOT_FOUND: "ITEM_GROUP_NOT_FOUND",
+  ITEM_GROUP_NAME_ALREADY_EXISTS: "ITEM_GROUP_NAME_ALREADY_EXISTS",
+  ITEM_GROUP_CODE_ALREADY_EXISTS: "ITEM_GROUP_CODE_ALREADY_EXISTS",
+  ITEM_NOT_FOUND: "ITEM_NOT_FOUND",
+  ITEM_NAME_ALREADY_EXISTS: "ITEM_NAME_ALREADY_EXISTS",
+  ITEM_CODE_ALREADY_EXISTS: "ITEM_CODE_ALREADY_EXISTS",
+
+  // Purchase Specific
+  PURCHASE_NOT_FOUND: "PURCHASE_NOT_FOUND",
+  PURCHASE_NUMBER_ALREADY_EXISTS: "PURCHASE_NUMBER_ALREADY_EXISTS",
+
+  // Stock Transfer Specific
+  STOCK_TRANSFER_NOT_FOUND: "STOCK_TRANSFER_NOT_FOUND",
+  TRANSFER_NUMBER_ALREADY_EXISTS: "TRANSFER_NUMBER_ALREADY_EXISTS",
+  INSUFFICIENT_STOCK: "INSUFFICIENT_STOCK",
+
+  // Sales Specific
+  SALE_NOT_FOUND: "SALE_NOT_FOUND",
+  SALES_NUMBER_ALREADY_EXISTS: "SALES_NUMBER_ALREADY_EXISTS",
+
+  // Debit Note Specific
+  DEBIT_NOTE_NOT_FOUND: "DEBIT_NOTE_NOT_FOUND",
+  DEBIT_NOTE_NUMBER_ALREADY_EXISTS: "DEBIT_NOTE_NUMBER_ALREADY_EXISTS",
+
+  // Credit Note Specific
+  CREDIT_NOTE_NOT_FOUND: "CREDIT_NOTE_NOT_FOUND",
+  CREDIT_NOTE_NUMBER_ALREADY_EXISTS: "CREDIT_NOTE_NUMBER_ALREADY_EXISTS",
 };
 
 export const ERROR_MESSAGES = {
@@ -77,7 +150,7 @@ export const ERROR_MESSAGES = {
   ADMIN_ROLE_INVALID: "Entered invalid admin role",
   OTP_EXPIRED: "OTP expired",
   INCORRECT_OTP: "Incorrect OTP",
-  USER_CREATION_FAILED: "User creation failed. Internal server error",
+  USER_CREATION_FAILED: "User creation failed. Please try again.",
   UNAUTHORIZED: "Your session has expired. Please log in again.",
   NOT_FOUND: "Resource not found",
   USER_NOT_FOUND: "User not found",
@@ -104,7 +177,8 @@ export const ERROR_MESSAGES = {
   NEW_USER_ACCESS_SCOPE_NOT_MATCH: "New user access scope does not match admin access scope",
   UPDATE_USER_ACCESS_SCOPE_NOT_MATCH: "Update user access scope does not match admin access scope",
   DELETE_USER_ACCESS_SCOPE_NOT_MATCH: "Delete user access scope does not match admin access scope",
-  USER_ASSIGNED_TO_WAREHOUSE: "User is assigned to branch/warehouse",
+  USER_ASSIGNED_TO_WAREHOUSE: "User is assigned to godown",
+  USER_ASSIGNED_TO_GODOWN: "User is assigned to godown",
   INVALID_INPUT: "Invalid input provided",
 
   // Admin Specific
@@ -117,4 +191,76 @@ export const ERROR_MESSAGES = {
   INCORRECT_CURRENT_PASSWORD: "Current password does not match.",
   NEW_PASSWORD_CANNOT_BE_SAME: "New password cannot be the same as current password.",
   PASSWORD_REQUIRED: "Account password is not set. Please contact administrator.",
+
+  // Godown Specific
+  GODOWN_NOT_FOUND: "Godown not found",
+  GODOWN_ALREADY_EXISTS: "Godown already exists",
+  GODOWN_NAME_ALREADY_EXISTS: "Godown with this name already exists",
+  GODOWN_ID_ALREADY_EXISTS: "Godown ID already exists",
+  GODOWN_INVALID_LOCATION: "Invalid godown location provided",
+  GODOWN_ACCESS_SCOPE_NOT_MATCH_WITH_ADMIN: "You are not authorized to manage godowns in this region",
+  GODOWN_MANAGER_NOT_FOUND: "Godown manager not found",
+  GODOWN_MANAGER_DISABLED: "Assigned godown manager is inactive",
+  GODOWN_MANAGER_ROLE_INVALID: "Assigned user is not a godown manager",
+  GODOWN_MANAGER_ACCESS_SCOPE_NOT_MATCH: "Godown manager region scope does not match godown region",
+  GODOWN_SUPERVISOR_NOT_FOUND: "One or more supervisors not found",
+  GODOWN_SUPERVISOR_DISABLED: "One or more supervisors are inactive",
+  GODOWN_SUPERVISOR_ROLE_INVALID: "Assigned user is not a supervisor",
+  GODOWN_SUPERVISOR_ACCESS_SCOPE_NOT_MATCH: "Supervisor region scope does not match godown region",
+  GODOWN_ASSISTANT_NOT_FOUND: "One or more assistants not found",
+  GODOWN_ASSISTANT_DISABLED: "One or more assistants are inactive",
+  GODOWN_ASSISTANT_ROLE_INVALID: "Assigned user is not an assistant",
+  GODOWN_ASSISTANT_ACCESS_SCOPE_NOT_MATCH: "Assistant region scope does not match godown region",
+  GODOWN_BILLING_USER_NOT_FOUND: "Billing user not found",
+  GODOWN_BILLING_USER_DISABLED: "Billing user is inactive",
+  GODOWN_BILLING_USER_ROLE_INVALID: "Assigned user is not a billing user",
+  GODOWN_BILLING_USER_ACCESS_SCOPE_NOT_MATCH: "Billing user region scope does not match godown region",
+  GODOWN_DELETE_FAILED: "Failed to delete godown",
+  JOBWORK_GODOWN_ADMIN_NOT_ALLOWED: "Admin users cannot be assigned to a jobwork godown",
+  GODOWN_ACCESS_DENIED: "You do not have access to this godown based on your hierarchy level and region",
+  GODOWN_INACTIVE: "Selected godown is inactive",
+  COMPANY_GODOWN_REQUIRED: "Company godown is mandatory for purchase",
+  COMPANY_GODOWN_INVALID: "Selected godown must be an active company godown",
+  STOCK_MODIFICATION_DENIED: "You do not have permission to modify stock for this company godown based on your hierarchy level and region",
+
+  // Inventory & Masters Specific
+  PARTY_NOT_FOUND: "Party not found",
+  PARTY_NAME_ALREADY_EXISTS: "Party with this name already exists",
+  PARTY_CODE_ALREADY_EXISTS: "Party code already exists",
+  PURCHASE_TYPE_NOT_FOUND: "Purchase type not found",
+  PURCHASE_TYPE_NAME_ALREADY_EXISTS: "Purchase type with this name already exists",
+  SALES_TYPE_NOT_FOUND: "Sales type not found",
+  SALES_TYPE_NAME_ALREADY_EXISTS: "Sales type with this name already exists",
+  UOM_NOT_FOUND: "Unit of measurement not found",
+  UOM_NAME_ALREADY_EXISTS: "Unit of measurement with this name already exists",
+  UOM_SYMBOL_ALREADY_EXISTS: "Unit of measurement with this symbol already exists",
+  PER_UNIT_NOT_FOUND: "Per unit not found",
+  PER_UNIT_NAME_ALREADY_EXISTS: "Per unit with this name already exists",
+  ITEM_GROUP_NOT_FOUND: "Item group not found",
+  ITEM_GROUP_NAME_ALREADY_EXISTS: "Item group with this name already exists",
+  ITEM_GROUP_CODE_ALREADY_EXISTS: "Item group code already exists",
+  ITEM_NOT_FOUND: "Item not found",
+  ITEM_NAME_ALREADY_EXISTS: "Item with this name already exists",
+  ITEM_CODE_ALREADY_EXISTS: "Item code already exists",
+
+  // Purchase Specific
+  PURCHASE_NOT_FOUND: "Purchase not found",
+  PURCHASE_NUMBER_ALREADY_EXISTS: "Purchase number already exists",
+
+  // Stock Transfer Specific
+  STOCK_TRANSFER_NOT_FOUND: "Stock transfer not found",
+  TRANSFER_NUMBER_ALREADY_EXISTS: "Transfer number already exists",
+  INSUFFICIENT_STOCK: "Insufficient stock available for this operation",
+
+  // Sales Specific
+  SALE_NOT_FOUND: "Sale not found",
+  SALES_NUMBER_ALREADY_EXISTS: "Sales number already exists",
+
+  // Debit Note Specific
+  DEBIT_NOTE_NOT_FOUND: "Debit note not found",
+  DEBIT_NOTE_NUMBER_ALREADY_EXISTS: "Debit note number already exists",
+
+  // Credit Note Specific
+  CREDIT_NOTE_NOT_FOUND: "Credit note not found",
+  CREDIT_NOTE_NUMBER_ALREADY_EXISTS: "Credit note number already exists",
 };

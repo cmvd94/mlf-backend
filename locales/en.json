@@ -1,14 +1,108 @@
 {
   "CRUDADMIN": {
-    "USER_CREATED": "Admin user created successfully",
-    "USER_UPDATED": "Admin user updated successfully",
-    "USER_DELETED": "Admin user deleted successfully",
+    "USER_CREATED": "User created successfully",
+    "USER_UPDATED": "User updated successfully",
+    "USER_DELETED": "User deleted successfully",
     "QUERIED_USER_LIST": "User list fetched successfully",
-    "USER_FETCHED": "Admin user fetched successfully",
+    "USER_FETCHED": "User fetched successfully",
     "USER_IS_ACTIVE_UPDATED": "User active status updated successfully"
   },
   "ADMIN": {
     "STATIC_DATA": "Admin static data fetched successfully"
+  },
+  "GODOWN": {
+    "CREATED": "Godown created successfully",
+    "UPDATED": "Godown updated successfully",
+    "DELETED": "Godown deleted successfully",
+    "FETCHED": "Godown fetched successfully",
+    "LIST_FETCHED": "Godown list fetched successfully",
+    "STATUS_UPDATED": "Godown status updated successfully",
+    "ELIGIBLE_ADMINS_FETCHED": "Eligible admins fetched successfully"
+  },
+  "ADMIN_AUTH": {
+    "LOGIN_SUCCESSFUL": "Admin login successful",
+    "LOGOUT_SUCCESS": "Admin logged out successfully",
+    "LOGOUT_ALL": "Admin logged out from all devices successfully",
+    "PASSWORD_CHANGED": "Password changed successfully"
+  },
+  "INVENTORY": {
+    "PARTY_CREATED": "Party created successfully",
+    "PARTY_UPDATED": "Party updated successfully",
+    "PARTY_DELETED": "Party deleted successfully",
+    "PARTY_FETCHED": "Party fetched successfully",
+    "PARTY_LIST_FETCHED": "Party list fetched successfully",
+    "PURCHASE_TYPE_CREATED": "Purchase type created successfully",
+    "PURCHASE_TYPE_UPDATED": "Purchase type updated successfully",
+    "PURCHASE_TYPE_DELETED": "Purchase type deleted successfully",
+    "PURCHASE_TYPE_FETCHED": "Purchase type fetched successfully",
+    "PURCHASE_TYPE_LIST_FETCHED": "Purchase type list fetched successfully",
+    "SALES_TYPE_CREATED": "Sales type created successfully",
+    "SALES_TYPE_UPDATED": "Sales type updated successfully",
+    "SALES_TYPE_DELETED": "Sales type deleted successfully",
+    "SALES_TYPE_FETCHED": "Sales type fetched successfully",
+    "SALES_TYPE_LIST_FETCHED": "Sales type list fetched successfully",
+    "UOM_CREATED": "Unit of measurement created successfully",
+    "UOM_UPDATED": "Unit of measurement updated successfully",
+    "UOM_DELETED": "Unit of measurement deleted successfully",
+    "UOM_FETCHED": "Unit of measurement fetched successfully",
+    "UOM_LIST_FETCHED": "Unit of measurement list fetched successfully",
+    "PER_UNIT_CREATED": "Per unit created successfully",
+    "PER_UNIT_UPDATED": "Per unit updated successfully",
+    "PER_UNIT_DELETED": "Per unit deleted successfully",
+    "PER_UNIT_FETCHED": "Per unit fetched successfully",
+    "PER_UNIT_LIST_FETCHED": "Per unit list fetched successfully",
+    "ITEM_GROUP_CREATED": "Item group created successfully",
+    "ITEM_GROUP_UPDATED": "Item group updated successfully",
+    "ITEM_GROUP_DELETED": "Item group deleted successfully",
+    "ITEM_GROUP_FETCHED": "Item group fetched successfully",
+    "ITEM_GROUP_LIST_FETCHED": "Item group list fetched successfully",
+    "ITEM_CREATED": "Item created successfully",
+    "ITEM_UPDATED": "Item updated successfully",
+    "ITEM_DELETED": "Item deleted successfully",
+    "ITEM_FETCHED": "Item fetched successfully",
+    "ITEM_LIST_FETCHED": "Item list fetched successfully",
+    "MASTERS_FETCHED": "Account and inventory masters fetched successfully"
+  },
+  "PURCHASE": {
+    "CREATED": "Purchase entry recorded successfully and stock updated",
+    "UPDATED": "Purchase entry updated successfully",
+    "DELETED": "Purchase entry deleted successfully and stock reverted",
+    "FETCHED": "Purchase entry fetched successfully",
+    "LIST_FETCHED": "Purchase list fetched successfully"
+  },
+  "STOCK_SUMMARY": {
+    "FETCHED": "Stock summary fetched successfully"
+  },
+  "STOCK_TRANSFER": {
+    "CREATED": "Stock transfer recorded successfully and stocks updated",
+    "UPDATED": "Stock transfer updated successfully and stocks reconciled",
+    "DELETED": "Stock transfer deleted successfully and stocks reverted",
+    "FETCHED": "Stock transfer fetched successfully",
+    "LIST_FETCHED": "Stock transfers fetched successfully",
+    "AVAILABLE_STOCK_FETCHED": "Available stocks fetched successfully"
+  },
+  "SALE": {
+    "CREATED": "Sale entry recorded successfully and stock updated",
+    "UPDATED": "Sale entry updated successfully and stock reconciled",
+    "DELETED": "Sale entry deleted successfully and stock reverted",
+    "FETCHED": "Sale entry fetched successfully",
+    "LIST_FETCHED": "Sales list fetched successfully",
+    "AVAILABLE_STOCK_FETCHED": "Available stocks for sale fetched successfully"
+  },
+  "DEBIT_NOTE": {
+    "CREATED": "Debit note recorded successfully and stock updated",
+    "UPDATED": "Debit note updated successfully and stock reconciled",
+    "DELETED": "Debit note deleted successfully and stock reverted",
+    "FETCHED": "Debit note fetched successfully",
+    "LIST_FETCHED": "Debit note list fetched successfully",
+    "AVAILABLE_STOCK_FETCHED": "Available stocks for debit note fetched successfully"
+  },
+  "CREDIT_NOTE": {
+    "CREATED": "Credit note recorded successfully and stock updated",
+    "UPDATED": "Credit note updated successfully",
+    "DELETED": "Credit note deleted successfully and stock reverted",
+    "FETCHED": "Credit note fetched successfully",
+    "LIST_FETCHED": "Credit note list fetched successfully"
   },
   "ERRORS": {
     "INTERNAL_SERVER_ERROR": "Something went wrong. Please try again in a moment.",
@@ -26,7 +120,7 @@
     "ADMIN_ROLE_INVALID": "Entered invalid admin role",
     "OTP_EXPIRED": "OTP expired",
     "INCORRECT_OTP": "Incorrect OTP",
-    "USER_CREATION_FAILED": "User creation failed. Internal server error",
+    "USER_CREATION_FAILED": "User creation failed. Please try again.",
     "UNAUTHORIZED": "Your session has expired. Please log in again.",
     "NOT_FOUND": "Resource not found",
     "USER_NOT_FOUND": "User not found",
@@ -53,7 +147,8 @@
     "NEW_USER_ACCESS_SCOPE_NOT_MATCH": "New user access scope does not match admin access scope",
     "UPDATE_USER_ACCESS_SCOPE_NOT_MATCH": "Update user access scope does not match admin access scope",
     "DELETE_USER_ACCESS_SCOPE_NOT_MATCH": "Delete user access scope does not match admin access scope",
-    "USER_ASSIGNED_TO_WAREHOUSE": "User is assigned to branch/warehouse",
+    "USER_ASSIGNED_TO_WAREHOUSE": "User is assigned to godown",
+    "USER_ASSIGNED_TO_GODOWN": "User is assigned to godown",
     "INVALID_INPUT": "Invalid input provided",
     "SUPER_ADMIN_CANNOT_BE_UPDATED": "Super admin cannot be updated.",
     "ADMIN_CANNOT_UPDATE_SELF": "You cannot update your own status.",
@@ -63,6 +158,12 @@
     "INVALID_PASSWORD": "Password must be at least 6 characters.",
     "INCORRECT_CURRENT_PASSWORD": "Current password does not match.",
     "NEW_PASSWORD_CANNOT_BE_SAME": "New password cannot be the same as current password.",
-    "PASSWORD_REQUIRED": "Account password is not set. Please contact administrator."
+    "PASSWORD_REQUIRED": "Account password is not set. Please contact administrator.",
+    "JOBWORK_GODOWN_ADMIN_NOT_ALLOWED": "Admin users cannot be assigned to a jobwork godown",
+    "ITEM_GROUP_NOT_FOUND": "Item group not found",
+    "ITEM_GROUP_NAME_ALREADY_EXISTS": "Item group with this name already exists",
+    "ITEM_GROUP_CODE_ALREADY_EXISTS": "Item group code already exists",
+    "GODOWN_ACCESS_DENIED": "You do not have access to this godown based on your hierarchy level and region",
+    "GODOWN_INACTIVE": "Selected godown is inactive"
   }
 }

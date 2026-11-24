@@ -9,6 +9,7 @@ declare module "express-serve-static-core" {
       role: role;
       deviceId: string;
       accessScope?: AccessScope;
+      godownId?: string[];
     };
     rawBody?: string;
   }

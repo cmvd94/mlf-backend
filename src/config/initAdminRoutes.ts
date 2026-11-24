@@ -4,6 +4,14 @@ import {
   crudAdminController,
   adminAuthController,
   adminStaticDataController,
+  godownController,
+  accountInventoryController,
+  purchaseController,
+  stockSummaryController,
+  stockTransferController,
+  saleController,
+  debitNoteController,
+  creditNoteController,
 } from "./di/initResolveDependencies";
 
 export const initAdminRoutes = (app: Application) => {
@@ -11,5 +19,13 @@ export const initAdminRoutes = (app: Application) => {
     adminAuthController,
     crudAdminController,
     adminStaticDataController,
+    godownController,
+    accountInventoryController,
+    purchaseController,
+    stockSummaryController,
+    stockTransferController,
+    saleController,
+    debitNoteController,
+    creditNoteController,
   ]);
 };

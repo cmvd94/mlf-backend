@@ -17,6 +17,7 @@ import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/valida
 import { AdminSessionRepository } from "@/infrastructure/repositories/admin/AdminSessionRepository";
 import { DeleteAdminDTO } from "@/shared/dto/admin/crudUserDTO";
 import { Admin } from "@/domain/entities/admin/Admin";
+import { GodownModel } from "@/domain/entities/admin/Godown";
 
 @injectable()
 export class DeleteUserUseCase {
@@ -47,6 +48,31 @@ export class DeleteUserUseCase {
         reqAdmin,
         userToDelete
       );
+
+      const isAssignedToGodown =
+        Boolean(
+          (userToDelete.godownId && userToDelete.godownId.length > 0) ||
+          (userToDelete.accessScope?.pincode && userToDelete.accessScope.pincode.length > 0)
+        ) ||
+        Boolean(
+          await GodownModel.exists({
+            isDeleted: false,
+            $or: [
+              { godownManager: userObjectId },
+              { billingUser: userObjectId },
+              { supervisors: userObjectId },
+              { assistants: userObjectId },
+            ],
+          })
+        );
+
+      if (isAssignedToGodown) {
+        throw new HttpException(
+          400,
+          ERROR_MESSAGES.USER_ASSIGNED_TO_GODOWN,
+          ERROR_CODES.USER_ASSIGNED_TO_GODOWN
+        );
+      }
 
       await withTransaction(async (session) => {
         await this.adminRepository.softDeleteAdmin(
