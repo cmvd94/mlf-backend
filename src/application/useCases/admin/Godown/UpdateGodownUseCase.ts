@@ -123,10 +123,10 @@ export class UpdateGodownUseCase {
           );
         }
 
-        updatePayload.godownManagerId = undefined;
+        updatePayload.godownManagerId = null;
         updatePayload.supervisorId = [];
         updatePayload.assistantId = [];
-        updatePayload.billingUserId = undefined;
+        updatePayload.billingUserId = null;
       } else {
         // 1. Handle Godown Manager update
         if (data.godownManagerId !== undefined) {
@@ -136,7 +136,7 @@ export class UpdateGodownUseCase {
                 generateObjectId(existing.godownManagerId.toString())
               );
             }
-            updatePayload.godownManagerId = undefined;
+            updatePayload.godownManagerId = null;
           } else {
             const newManagerId = generateObjectId(data.godownManagerId);
             const currentManagerIdStr = existing.godownManagerId?.toString();
@@ -457,7 +457,7 @@ export class UpdateGodownUseCase {
                 generateObjectId(existing.billingUserId.toString())
               );
             }
-            updatePayload.billingUserId = undefined;
+            updatePayload.billingUserId = null;
           } else {
             const newBillingId = generateObjectId(data.billingUserId);
             const currentBillingIdStr = existing.billingUserId?.toString();

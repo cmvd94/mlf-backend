@@ -19,6 +19,8 @@ export interface CreateBatchStockParams {
   perId?: string | Types.ObjectId;
   purchaseId?: string | Types.ObjectId;
   purchaseItemId?: string | Types.ObjectId;
+  creditNoteId?: string | Types.ObjectId;
+  creditNoteItemId?: string | Types.ObjectId;
   stockTransferId?: string | Types.ObjectId;
   sourceType?: StockSourceType;
   createdBy?: string | Types.ObjectId;
@@ -56,6 +58,12 @@ export class GodownStockRepository {
     }
     if (params.purchaseItemId) {
       docData.purchaseItemId = typeof params.purchaseItemId === "string" ? generateObjectId(params.purchaseItemId) : params.purchaseItemId;
+    }
+    if (params.creditNoteId) {
+      docData.creditNoteId = typeof params.creditNoteId === "string" ? generateObjectId(params.creditNoteId) : params.creditNoteId;
+    }
+    if (params.creditNoteItemId) {
+      docData.creditNoteItemId = typeof params.creditNoteItemId === "string" ? generateObjectId(params.creditNoteItemId) : params.creditNoteItemId;
     }
     if (params.stockTransferId) {
       docData.stockTransferId = typeof params.stockTransferId === "string" ? generateObjectId(params.stockTransferId) : params.stockTransferId;
@@ -186,6 +194,14 @@ export class GodownStockRepository {
   }
 
   /**
+   * Find all GodownStock docs created by a credit note
+   */
+  async findByCreditNoteId(creditNoteId: string | Types.ObjectId) {
+    const cnObjectId = typeof creditNoteId === "string" ? generateObjectId(creditNoteId) : creditNoteId;
+    return await GodownStockModel.find({ creditNoteId: cnObjectId, isDeleted: false }).lean();
+  }
+
+  /**
    * Delete or soft-delete all stock records for a purchase
    */
   async deleteByPurchaseId(
@@ -222,6 +238,30 @@ export class GodownStockRepository {
 
     return await GodownStockModel.updateMany(
       { stockTransferId: stObjectId },
+      {
+        $set: {
+          currentStock: 0,
+          isDeleted: true,
+          ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
+        },
+      },
+      { session }
+    );
+  }
+
+  /**
+   * Delete or soft-delete all stock records for a credit note
+   */
+  async deleteByCreditNoteId(
+    creditNoteId: string | Types.ObjectId,
+    adminId?: string | Types.ObjectId,
+    session?: ClientSession
+  ) {
+    const cnObjectId = typeof creditNoteId === "string" ? generateObjectId(creditNoteId) : creditNoteId;
+    const adminObjectId = adminId ? (typeof adminId === "string" ? generateObjectId(adminId) : adminId) : undefined;
+
+    return await GodownStockModel.updateMany(
+      { creditNoteId: cnObjectId },
       {
         $set: {
           currentStock: 0,

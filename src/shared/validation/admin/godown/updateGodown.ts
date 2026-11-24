@@ -26,11 +26,16 @@ export const UpdateGodownRouteSchema = z.object({
     isActive: z.boolean().optional(),
     // Assigned users updates:
     godownManagerId: z
-      .string()
-      .trim()
-      .regex(/^[a-f\d]{24}$/i, "Invalid Godown Manager ID format")
-      .nullable()
-      .optional(),
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(/^[a-f\d]{24}$/i, "Invalid Godown Manager ID format"),
+        z.literal(""),
+        z.null(),
+      ])
+      .optional()
+      .transform((val) => (val === "" || val === null ? null : val)),
     supervisorId: z
       .array(
         z
@@ -80,11 +85,16 @@ export const UpdateGodownRouteSchema = z.object({
       )
       .optional(),
     billingUserId: z
-      .string()
-      .trim()
-      .regex(/^[a-f\d]{24}$/i, "Invalid Billing User ID format")
-      .nullable()
-      .optional(),
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(/^[a-f\d]{24}$/i, "Invalid Billing User ID format"),
+        z.literal(""),
+        z.null(),
+      ])
+      .optional()
+      .transform((val) => (val === "" || val === null ? null : val)),
   }),
   query: z.object({}).optional(),
   headers: z.object({}).passthrough().optional(),

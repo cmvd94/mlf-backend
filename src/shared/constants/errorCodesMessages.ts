@@ -121,6 +121,14 @@ export const ERROR_CODES = {
   // Sales Specific
   SALE_NOT_FOUND: "SALE_NOT_FOUND",
   SALES_NUMBER_ALREADY_EXISTS: "SALES_NUMBER_ALREADY_EXISTS",
+
+  // Debit Note Specific
+  DEBIT_NOTE_NOT_FOUND: "DEBIT_NOTE_NOT_FOUND",
+  DEBIT_NOTE_NUMBER_ALREADY_EXISTS: "DEBIT_NOTE_NUMBER_ALREADY_EXISTS",
+
+  // Credit Note Specific
+  CREDIT_NOTE_NOT_FOUND: "CREDIT_NOTE_NOT_FOUND",
+  CREDIT_NOTE_NUMBER_ALREADY_EXISTS: "CREDIT_NOTE_NUMBER_ALREADY_EXISTS",
 };
 
 export const ERROR_MESSAGES = {
@@ -247,4 +255,12 @@ export const ERROR_MESSAGES = {
   // Sales Specific
   SALE_NOT_FOUND: "Sale not found",
   SALES_NUMBER_ALREADY_EXISTS: "Sales number already exists",
+
+  // Debit Note Specific
+  DEBIT_NOTE_NOT_FOUND: "Debit note not found",
+  DEBIT_NOTE_NUMBER_ALREADY_EXISTS: "Debit note number already exists",
+
+  // Credit Note Specific
+  CREDIT_NOTE_NOT_FOUND: "Credit note not found",
+  CREDIT_NOTE_NUMBER_ALREADY_EXISTS: "Credit note number already exists",
 };

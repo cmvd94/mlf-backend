@@ -9,6 +9,8 @@ import { PurchaseController } from "@/interfaces/controllers/admin/PurchaseContr
 import { StockSummaryController } from "@/interfaces/controllers/admin/StockSummaryController";
 import { StockTransferController } from "@/interfaces/controllers/admin/StockTransferController";
 import { SaleController } from "@/interfaces/controllers/admin/SaleController";
+import { DebitNoteController } from "@/interfaces/controllers/admin/DebitNoteController";
+import { CreditNoteController } from "@/interfaces/controllers/admin/CreditNoteController";
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { CreateUserUseCase } from "@/application/useCases/admin/CRUDAdminUser/CreateUserUseCase";
 import { initLoggerDI } from "./initRegisterLoggerDI";
@@ -30,3 +32,5 @@ export const purchaseController = container.resolve(PurchaseController);
 export const stockSummaryController = container.resolve(StockSummaryController);
 export const stockTransferController = container.resolve(StockTransferController);
 export const saleController = container.resolve(SaleController);
+export const debitNoteController = container.resolve(DebitNoteController);
+export const creditNoteController = container.resolve(CreditNoteController);

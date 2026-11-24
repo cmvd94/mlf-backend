@@ -101,6 +101,25 @@ import {
 } from "@/application/useCases/admin/Sale/SaleDetailsUseCases";
 import { GetAvailableStockForSaleUseCase } from "@/application/useCases/admin/Sale/GetAvailableStockForSaleUseCase";
 import { SaleController } from "@/interfaces/controllers/admin/SaleController";
+import { DebitNoteRepository } from "@/infrastructure/repositories/admin/DebitNoteRepository";
+import { CreateDebitNoteUseCase } from "@/application/useCases/admin/DebitNote/CreateDebitNoteUseCase";
+import { UpdateDebitNoteUseCase } from "@/application/useCases/admin/DebitNote/UpdateDebitNoteUseCase";
+import { GetDebitNoteListUseCase } from "@/application/useCases/admin/DebitNote/GetDebitNoteListUseCase";
+import {
+  GetDebitNoteByIdUseCase,
+  DeleteDebitNoteUseCase,
+} from "@/application/useCases/admin/DebitNote/DebitNoteDetailsUseCases";
+import { GetAvailableStockForDebitNoteUseCase } from "@/application/useCases/admin/DebitNote/GetAvailableStockForDebitNoteUseCase";
+import { DebitNoteController } from "@/interfaces/controllers/admin/DebitNoteController";
+import { CreditNoteRepository } from "@/infrastructure/repositories/admin/CreditNoteRepository";
+import { CreateCreditNoteUseCase } from "@/application/useCases/admin/CreditNote/CreateCreditNoteUseCase";
+import { UpdateCreditNoteUseCase } from "@/application/useCases/admin/CreditNote/UpdateCreditNoteUseCase";
+import { GetCreditNoteListUseCase } from "@/application/useCases/admin/CreditNote/GetCreditNoteListUseCase";
+import {
+  GetCreditNoteByIdUseCase,
+  DeleteCreditNoteUseCase,
+} from "@/application/useCases/admin/CreditNote/CreditNoteDetailsUseCases";
+import { CreditNoteController } from "@/interfaces/controllers/admin/CreditNoteController";
 
 export const initAdminDI = () => {
   container.registerSingleton(AdminRepository, AdminRepository);
@@ -118,6 +137,8 @@ export const initAdminDI = () => {
   container.registerSingleton(StockSummaryRepository, StockSummaryRepository);
   container.registerSingleton(StockTransferRepository, StockTransferRepository);
   container.registerSingleton(SaleRepository, SaleRepository);
+  container.registerSingleton(DebitNoteRepository, DebitNoteRepository);
+  container.registerSingleton(CreditNoteRepository, CreditNoteRepository);
 
   container.registerSingleton(CreateUserUseCase, CreateUserUseCase);
   container.registerSingleton(UpdateUserUseCase, UpdateUserUseCase);
@@ -190,6 +211,19 @@ export const initAdminDI = () => {
   container.registerSingleton(DeleteSaleUseCase, DeleteSaleUseCase);
   container.registerSingleton(GetAvailableStockForSaleUseCase, GetAvailableStockForSaleUseCase);
 
+  container.registerSingleton(CreateDebitNoteUseCase, CreateDebitNoteUseCase);
+  container.registerSingleton(UpdateDebitNoteUseCase, UpdateDebitNoteUseCase);
+  container.registerSingleton(GetDebitNoteListUseCase, GetDebitNoteListUseCase);
+  container.registerSingleton(GetDebitNoteByIdUseCase, GetDebitNoteByIdUseCase);
+  container.registerSingleton(DeleteDebitNoteUseCase, DeleteDebitNoteUseCase);
+  container.registerSingleton(GetAvailableStockForDebitNoteUseCase, GetAvailableStockForDebitNoteUseCase);
+
+  container.registerSingleton(CreateCreditNoteUseCase, CreateCreditNoteUseCase);
+  container.registerSingleton(UpdateCreditNoteUseCase, UpdateCreditNoteUseCase);
+  container.registerSingleton(GetCreditNoteListUseCase, GetCreditNoteListUseCase);
+  container.registerSingleton(GetCreditNoteByIdUseCase, GetCreditNoteByIdUseCase);
+  container.registerSingleton(DeleteCreditNoteUseCase, DeleteCreditNoteUseCase);
+
   container.registerSingleton(CRUDAdminUserController, CRUDAdminUserController);
   container.registerSingleton(AdminStaticDataController, AdminStaticDataController);
   container.registerSingleton(GodownController, GodownController);
@@ -198,4 +232,6 @@ export const initAdminDI = () => {
   container.registerSingleton(StockSummaryController, StockSummaryController);
   container.registerSingleton(StockTransferController, StockTransferController);
   container.registerSingleton(SaleController, SaleController);
+  container.registerSingleton(DebitNoteController, DebitNoteController);
+  container.registerSingleton(CreditNoteController, CreditNoteController);
 };

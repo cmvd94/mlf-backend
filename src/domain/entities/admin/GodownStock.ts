@@ -16,6 +16,7 @@ export enum StockSourceType {
   PURCHASE = "PURCHASE",
   TRANSFER = "TRANSFER",
   MANUAL = "MANUAL",
+  CREDIT_NOTE = "CREDIT_NOTE",
 }
 
 @modelOptions({
@@ -30,6 +31,7 @@ export enum StockSourceType {
 @index({ godownId: 1, itemId: 1, dcNo: 1, lotNo: 1 })
 @index({ godownId: 1, currentStock: 1 })
 @index({ purchaseId: 1 })
+@index({ creditNoteId: 1 })
 @index({ stockTransferId: 1 })
 export class GodownStock {
   @prop({ auto: true })
@@ -73,6 +75,12 @@ export class GodownStock {
 
   @prop({ required: false })
   public purchaseItemId?: Types.ObjectId;
+
+  @prop({ ref: () => "CreditNote", required: false })
+  public creditNoteId?: Ref<any>;
+
+  @prop({ required: false })
+  public creditNoteItemId?: Types.ObjectId;
 
   @prop({ ref: () => "StockTransfer", required: false })
   public stockTransferId?: Ref<any>;

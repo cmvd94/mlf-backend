@@ -36,11 +36,16 @@ export const CreateGodownRouteSchema = z.object({
     // Assigned users (all optional; not required / not allowed for jobwork godown):
     // godown manager single user
     godownManagerId: z
-      .string()
-      .trim()
-      .regex(/^[a-f\d]{24}$/i, "Invalid Godown Manager ID format")
-      .nullable()
-      .optional(),
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(/^[a-f\d]{24}$/i, "Invalid Godown Manager ID format"),
+        z.literal(""),
+        z.null(),
+      ])
+      .optional()
+      .transform((val) => (val === "" || val === null ? null : val)),
     // SUPERVISOR []
     supervisorId: z
       .array(
@@ -63,11 +68,16 @@ export const CreateGodownRouteSchema = z.object({
       .optional(),
     // BILLING_USER single user
     billingUserId: z
-      .string()
-      .trim()
-      .regex(/^[a-f\d]{24}$/i, "Invalid Billing User ID format")
-      .nullable()
-      .optional(),
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(/^[a-f\d]{24}$/i, "Invalid Billing User ID format"),
+        z.literal(""),
+        z.null(),
+      ])
+      .optional()
+      .transform((val) => (val === "" || val === null ? null : val)),
     isActive: z.boolean().optional().default(true),
   }),
   query: z.object({}).optional(),
