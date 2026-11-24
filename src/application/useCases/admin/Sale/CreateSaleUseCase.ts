@@ -165,6 +165,9 @@ export class CreateSaleUseCase {
           throw new HttpException(400, "Rate cannot be negative", ERROR_CODES.VALIDATION_ERROR);
         }
 
+        const itemDoc = await this.itemRepository.getItemById(itemId);
+        const itemHsnCode = (itemInput.hsnCode || itemDoc?.hsnCode || (itemDoc?.hsnCodeId as any)?.hsnCode || "").trim();
+
         // Amount calculation done strictly in backend using billed quantity
         const itemAmount = Number(((billedQty * rate) / multiplier).toFixed(2));
 
@@ -179,6 +182,7 @@ export class CreateSaleUseCase {
           companyGodownId: generateObjectId(ownerCompanyGodown._id || ownerCompanyGodown),
           dcNo,
           lotNo,
+          hsnCode: itemHsnCode,
           uomId: generateObjectId(uomId),
           uomQuantity: uomQty,
           actualQuantity: actualQty,
@@ -237,6 +241,7 @@ export class CreateSaleUseCase {
           {
             _id: saleObjectId,
             salesNumber,
+            invoiceNo: dto.invoiceNo?.trim() || "",
             date: parseVoucherDate(dto.date),
             salesTypeId: generateObjectId(dto.salesTypeId) as any,
             partyId: generateObjectId(dto.partyId) as any,

@@ -10,6 +10,7 @@ import { Admin } from "./Admin";
 import { UnitOfMeasurement } from "./UnitOfMeasurement";
 import { PerUnit } from "./PerUnit";
 import { ItemGroup } from "./ItemGroup";
+import { HsnCode } from "./HsnCode";
 import { Types } from "mongoose";
 
 @modelOptions({
@@ -47,6 +48,12 @@ export class Item {
 
   @prop({ ref: () => PerUnit, required: true })
   public defaultPerId!: Ref<PerUnit>;
+
+  @prop({ ref: () => HsnCode, required: false })
+  public hsnCodeId?: Ref<HsnCode>;
+
+  @prop({ type: String, trim: true, default: "" })
+  public hsnCode?: string;
 
   @prop({ default: 0 })
   public standardRate!: number;

@@ -108,6 +108,8 @@ export const ERROR_CODES = {
   ITEM_NOT_FOUND: "ITEM_NOT_FOUND",
   ITEM_NAME_ALREADY_EXISTS: "ITEM_NAME_ALREADY_EXISTS",
   ITEM_CODE_ALREADY_EXISTS: "ITEM_CODE_ALREADY_EXISTS",
+  HSN_CODE_NOT_FOUND: "HSN_CODE_NOT_FOUND",
+  HSN_CODE_ALREADY_EXISTS: "HSN_CODE_ALREADY_EXISTS",
 
   // Purchase Specific
   PURCHASE_NOT_FOUND: "PURCHASE_NOT_FOUND",
@@ -242,6 +244,8 @@ export const ERROR_MESSAGES = {
   ITEM_NOT_FOUND: "Item not found",
   ITEM_NAME_ALREADY_EXISTS: "Item with this name already exists",
   ITEM_CODE_ALREADY_EXISTS: "Item code already exists",
+  HSN_CODE_NOT_FOUND: "HSN code not found",
+  HSN_CODE_ALREADY_EXISTS: "HSN code already exists",
 
   // Purchase Specific
   PURCHASE_NOT_FOUND: "Purchase not found",

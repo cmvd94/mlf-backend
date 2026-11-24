@@ -58,6 +58,11 @@ import {
   UpdateItemRouteSchema,
   DeleteItemRouteSchema,
 } from "@/shared/validation/admin/inventory/itemValidation";
+import {
+  CreateHsnCodeRouteSchema,
+  UpdateHsnCodeRouteSchema,
+  DeleteHsnCodeRouteSchema,
+} from "@/shared/validation/admin/inventory/hsnCodeValidation";
 
 import {
   CreatePartyUseCase,
@@ -101,6 +106,12 @@ import {
   DeleteItemUseCase,
   GetItemListUseCase,
 } from "@/application/useCases/admin/Inventory/ItemUseCases";
+import {
+  CreateHsnCodeUseCase,
+  UpdateHsnCodeUseCase,
+  DeleteHsnCodeUseCase,
+  GetHsnCodeListUseCase,
+} from "@/application/useCases/admin/Inventory/HsnCodeUseCases";
 import { GetMastersUseCase } from "@/application/useCases/admin/Inventory/GetMastersUseCase";
 
 import {
@@ -122,6 +133,8 @@ import {
   UpdateItemGroupDTO,
   CreateItemDTO,
   UpdateItemDTO,
+  CreateHsnCodeDTO,
+  UpdateHsnCodeDTO,
   InventoryQueryDTO,
 } from "@/shared/dto/admin/inventoryDTO";
 
@@ -158,6 +171,10 @@ export class AccountInventoryController {
     @inject(UpdateItemUseCase) private updateItemUseCase: UpdateItemUseCase,
     @inject(DeleteItemUseCase) private deleteItemUseCase: DeleteItemUseCase,
     @inject(GetItemListUseCase) private getItemListUseCase: GetItemListUseCase,
+    @inject(CreateHsnCodeUseCase) private createHsnCodeUseCase: CreateHsnCodeUseCase,
+    @inject(UpdateHsnCodeUseCase) private updateHsnCodeUseCase: UpdateHsnCodeUseCase,
+    @inject(DeleteHsnCodeUseCase) private deleteHsnCodeUseCase: DeleteHsnCodeUseCase,
+    @inject(GetHsnCodeListUseCase) private getHsnCodeListUseCase: GetHsnCodeListUseCase,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -706,6 +723,82 @@ export class AccountInventoryController {
     try {
       const result = await this.getItemListUseCase.execute(query);
       res.status(200).json(sendResponse(req, "INVENTORY.ITEM_LIST_FETCHED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  // ---------------- HSN Code CRUD ----------------
+  @Post("/hsn-code/create")
+  @ValidateSchema(CreateHsnCodeRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async createHsnCode(
+    @Body() body: CreateHsnCodeDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.createHsnCodeUseCase.execute(body, reqAdmin);
+      res.status(200).json(sendResponse(req, "INVENTORY.HSN_CODE_CREATED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  @Patch("/hsn-code/update/:id")
+  @ValidateSchema(UpdateHsnCodeRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async updateHsnCode(
+    @Params() params: { id: string },
+    @Body() body: UpdateHsnCodeDTO,
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.updateHsnCodeUseCase.execute(params.id, body, reqAdmin);
+      res.status(200).json(sendResponse(req, "INVENTORY.HSN_CODE_UPDATED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  @Delete("/hsn-code/delete/:id")
+  @ValidateSchema(DeleteHsnCodeRouteSchema)
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async deleteHsnCode(
+    @Params() params: { id: string },
+    @ReqAdmin() reqAdmin: ReqAdminDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.deleteHsnCodeUseCase.execute(params.id, reqAdmin);
+      res.status(200).json(sendResponse(req, "INVENTORY.HSN_CODE_DELETED", this.logger, result));
+    } catch (error) {
+      sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
+    }
+  }
+
+  @Get("/hsn-code/list")
+  @IsAdminAuthenticated()
+  @AdminRoleGuard(ROLE_GUARD_ALL)
+  public async getHsnCodeList(
+    @Query() query: InventoryQueryDTO,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction
+  ) {
+    try {
+      const result = await this.getHsnCodeListUseCase.execute(query);
+      res.status(200).json(sendResponse(req, "INVENTORY.HSN_CODE_LIST_FETCHED", this.logger, result));
     } catch (error) {
       sendErrorResponse(req, res, next, error, AdminErrorStage.AccountInventoryController, this.logger);
     }

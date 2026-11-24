@@ -85,6 +85,8 @@ export interface CreateItemDTO {
   description?: string;
   defaultUomId: string;
   defaultPerId: string;
+  hsnCodeId?: string;
+  hsnCode?: string;
   standardRate?: number;
   openingStock?: number;
   isActive?: boolean;
@@ -97,7 +99,23 @@ export interface UpdateItemDTO {
   description?: string;
   defaultUomId?: string;
   defaultPerId?: string;
+  hsnCodeId?: string;
+  hsnCode?: string;
   standardRate?: number;
+  isActive?: boolean;
+}
+
+export interface CreateHsnCodeDTO {
+  hsnCode: string;
+  description?: string;
+  gstRate?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateHsnCodeDTO {
+  hsnCode?: string;
+  description?: string;
+  gstRate?: number;
   isActive?: boolean;
 }
 

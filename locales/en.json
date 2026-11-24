@@ -61,6 +61,11 @@
     "ITEM_DELETED": "Item deleted successfully",
     "ITEM_FETCHED": "Item fetched successfully",
     "ITEM_LIST_FETCHED": "Item list fetched successfully",
+    "HSN_CODE_CREATED": "HSN code created successfully",
+    "HSN_CODE_UPDATED": "HSN code updated successfully",
+    "HSN_CODE_DELETED": "HSN code deleted successfully",
+    "HSN_CODE_FETCHED": "HSN code fetched successfully",
+    "HSN_CODE_LIST_FETCHED": "HSN code list fetched successfully",
     "MASTERS_FETCHED": "Account and inventory masters fetched successfully"
   },
   "PURCHASE": {

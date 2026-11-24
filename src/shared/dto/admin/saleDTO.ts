@@ -5,6 +5,7 @@ export interface CreateSaleItemDTO {
   companyGodownId?: string;
   lotNo?: string;
   dcNo?: string;
+  hsnCode?: string;
   uomId?: string;
   uomQuantity?: number;
   actualQuantity?: number;
@@ -18,6 +19,7 @@ export interface CreateSaleDTO {
   date: string;
   salesTypeId: string;
   partyId: string;
+  invoiceNo?: string;
   dcNo?: string;
   companyGodownId?: string;
   items: CreateSaleItemDTO[];
@@ -31,6 +33,7 @@ export interface UpdateSaleDTO {
   date?: string;
   salesTypeId?: string;
   partyId?: string;
+  invoiceNo?: string;
   dcNo?: string;
   companyGodownId?: string;
   items?: CreateSaleItemDTO[];

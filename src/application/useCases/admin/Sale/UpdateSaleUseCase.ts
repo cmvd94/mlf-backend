@@ -97,6 +97,9 @@ export class UpdateSaleUseCase {
           }
           updateFields.partyId = generateObjectId(dto.partyId);
         }
+        if (dto.invoiceNo !== undefined) {
+          updateFields.invoiceNo = dto.invoiceNo.trim();
+        }
         if (dto.dcNo !== undefined) {
           updateFields.dcNo = dto.dcNo.trim();
         }
@@ -267,6 +270,9 @@ export class UpdateSaleUseCase {
             throw new HttpException(400, "Rate cannot be negative", ERROR_CODES.VALIDATION_ERROR);
           }
 
+          const itemDoc = await this.itemRepository.getItemById(itemId);
+          const itemHsnCode = (itemInput.hsnCode || itemDoc?.hsnCode || (itemDoc?.hsnCodeId as any)?.hsnCode || "").trim();
+
           const itemAmount = Number(((billedQty * rate) / multiplier).toFixed(2));
 
           subTotal += itemAmount;
@@ -280,6 +286,7 @@ export class UpdateSaleUseCase {
             companyGodownId: generateObjectId(ownerCompanyGodown._id || ownerCompanyGodown),
             dcNo,
             lotNo,
+            hsnCode: itemHsnCode,
             uomId: uomId ? generateObjectId(uomId) : undefined,
             uomQuantity: uomQty,
             actualQuantity: actualQty,
@@ -345,6 +352,9 @@ export class UpdateSaleUseCase {
 
         if (dto.date) {
           updateData.date = parseVoucherDate(dto.date);
+        }
+        if (dto.invoiceNo !== undefined) {
+          updateData.invoiceNo = dto.invoiceNo.trim();
         }
         if (dto.dcNo !== undefined) {
           updateData.dcNo = dto.dcNo.trim();

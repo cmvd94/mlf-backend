@@ -113,6 +113,7 @@ export class ItemRepository {
       .populate("itemGroupId")
       .populate("defaultUomId")
       .populate("defaultPerId")
+      .populate("hsnCodeId")
       .lean();
   }
 
@@ -123,6 +124,7 @@ export class ItemRepository {
       .populate("itemGroupId")
       .populate("defaultUomId")
       .populate("defaultPerId")
+      .populate("hsnCodeId")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -138,6 +140,7 @@ export class ItemRepository {
       .populate("itemGroupId")
       .populate("defaultUomId")
       .populate("defaultPerId")
+      .populate("hsnCodeId")
       .sort({ name: 1 })
       .lean();
   }

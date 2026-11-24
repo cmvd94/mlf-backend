@@ -28,6 +28,7 @@ import { UomRepository } from "@/infrastructure/repositories/admin/UomRepository
 import { PerUnitRepository } from "@/infrastructure/repositories/admin/PerUnitRepository";
 import { ItemGroupRepository } from "@/infrastructure/repositories/admin/ItemGroupRepository";
 import { ItemRepository } from "@/infrastructure/repositories/admin/ItemRepository";
+import { HsnCodeRepository } from "@/infrastructure/repositories/admin/HsnCodeRepository";
 import { PurchaseRepository } from "@/infrastructure/repositories/admin/PurchaseRepository";
 import { GodownStockRepository } from "@/infrastructure/repositories/admin/GodownStockRepository";
 import {
@@ -72,6 +73,12 @@ import {
   DeleteItemUseCase,
   GetItemListUseCase,
 } from "@/application/useCases/admin/Inventory/ItemUseCases";
+import {
+  CreateHsnCodeUseCase,
+  UpdateHsnCodeUseCase,
+  DeleteHsnCodeUseCase,
+  GetHsnCodeListUseCase,
+} from "@/application/useCases/admin/Inventory/HsnCodeUseCases";
 import { GetMastersUseCase } from "@/application/useCases/admin/Inventory/GetMastersUseCase";
 import { CreatePurchaseUseCase } from "@/application/useCases/admin/Purchase/CreatePurchaseUseCase";
 import { UpdatePurchaseUseCase } from "@/application/useCases/admin/Purchase/UpdatePurchaseUseCase";
@@ -132,6 +139,7 @@ export const initAdminDI = () => {
   container.registerSingleton(PerUnitRepository, PerUnitRepository);
   container.registerSingleton(ItemGroupRepository, ItemGroupRepository);
   container.registerSingleton(ItemRepository, ItemRepository);
+  container.registerSingleton(HsnCodeRepository, HsnCodeRepository);
   container.registerSingleton(PurchaseRepository, PurchaseRepository);
   container.registerSingleton(GodownStockRepository, GodownStockRepository);
   container.registerSingleton(StockSummaryRepository, StockSummaryRepository);
@@ -193,6 +201,11 @@ export const initAdminDI = () => {
   container.registerSingleton(UpdateItemUseCase, UpdateItemUseCase);
   container.registerSingleton(DeleteItemUseCase, DeleteItemUseCase);
   container.registerSingleton(GetItemListUseCase, GetItemListUseCase);
+
+  container.registerSingleton(CreateHsnCodeUseCase, CreateHsnCodeUseCase);
+  container.registerSingleton(UpdateHsnCodeUseCase, UpdateHsnCodeUseCase);
+  container.registerSingleton(DeleteHsnCodeUseCase, DeleteHsnCodeUseCase);
+  container.registerSingleton(GetHsnCodeListUseCase, GetHsnCodeListUseCase);
 
   container.registerSingleton(CreatePurchaseUseCase, CreatePurchaseUseCase);
   container.registerSingleton(UpdatePurchaseUseCase, UpdatePurchaseUseCase);

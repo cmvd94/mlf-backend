@@ -4,6 +4,7 @@ import { ItemRepository } from "@/infrastructure/repositories/admin/ItemReposito
 import { ItemGroupRepository } from "@/infrastructure/repositories/admin/ItemGroupRepository";
 import { UomRepository } from "@/infrastructure/repositories/admin/UomRepository";
 import { PerUnitRepository } from "@/infrastructure/repositories/admin/PerUnitRepository";
+import { HsnCodeRepository } from "@/infrastructure/repositories/admin/HsnCodeRepository";
 import { CounterRepository } from "@/infrastructure/repositories/common/CounterRepository";
 import { CreateItemDTO, UpdateItemDTO, InventoryQueryDTO } from "@/shared/dto/admin/inventoryDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
@@ -20,6 +21,7 @@ export class CreateItemUseCase {
     @inject(ItemGroupRepository) private itemGroupRepository: ItemGroupRepository,
     @inject(UomRepository) private uomRepository: UomRepository,
     @inject(PerUnitRepository) private perUnitRepository: PerUnitRepository,
+    @inject(HsnCodeRepository) private hsnCodeRepository: HsnCodeRepository,
     @inject(CounterRepository) private counterRepository: CounterRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
@@ -46,6 +48,20 @@ export class CreateItemUseCase {
         throw new HttpException(404, ERROR_MESSAGES.PER_UNIT_NOT_FOUND, ERROR_CODES.PER_UNIT_NOT_FOUND);
       }
 
+      // Validate HSN Code if provided
+      let resolvedHsnCode = dto.hsnCode?.trim() || "";
+      let resolvedHsnCodeId: any = undefined;
+      if (dto.hsnCodeId) {
+        const hsnDoc = await this.hsnCodeRepository.getHsnCodeById(dto.hsnCodeId);
+        if (!hsnDoc) {
+          throw new HttpException(404, ERROR_MESSAGES.HSN_CODE_NOT_FOUND, ERROR_CODES.HSN_CODE_NOT_FOUND);
+        }
+        resolvedHsnCodeId = generateObjectId(dto.hsnCodeId);
+        if (!resolvedHsnCode) {
+          resolvedHsnCode = hsnDoc.hsnCode;
+        }
+      }
+
       let finalItemCode = dto.itemCode;
       if (!finalItemCode) {
         const seq = await this.counterRepository.getNextSequence("ITEM_CODE", this.logger);
@@ -59,6 +75,8 @@ export class CreateItemUseCase {
         description: dto.description?.trim() || "",
         defaultUomId: generateObjectId(dto.defaultUomId) as any,
         defaultPerId: generateObjectId(dto.defaultPerId) as any,
+        hsnCodeId: resolvedHsnCodeId,
+        hsnCode: resolvedHsnCode,
         standardRate: dto.standardRate !== undefined ? Number(dto.standardRate) : 0,
         currentStock: dto.openingStock !== undefined ? Number(dto.openingStock) : 0,
         isActive: dto.isActive !== undefined ? dto.isActive : true,
@@ -79,6 +97,7 @@ export class UpdateItemUseCase {
     @inject(ItemGroupRepository) private itemGroupRepository: ItemGroupRepository,
     @inject(UomRepository) private uomRepository: UomRepository,
     @inject(PerUnitRepository) private perUnitRepository: PerUnitRepository,
+    @inject(HsnCodeRepository) private hsnCodeRepository: HsnCodeRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -114,6 +133,22 @@ export class UpdateItemUseCase {
           throw new HttpException(404, ERROR_MESSAGES.PER_UNIT_NOT_FOUND, ERROR_CODES.PER_UNIT_NOT_FOUND);
         }
         updateData.defaultPerId = generateObjectId(dto.defaultPerId);
+      }
+
+      if (dto.hsnCodeId !== undefined) {
+        if (dto.hsnCodeId) {
+          const hsnDoc = await this.hsnCodeRepository.getHsnCodeById(dto.hsnCodeId);
+          if (!hsnDoc) {
+            throw new HttpException(404, ERROR_MESSAGES.HSN_CODE_NOT_FOUND, ERROR_CODES.HSN_CODE_NOT_FOUND);
+          }
+          updateData.hsnCodeId = generateObjectId(dto.hsnCodeId);
+          updateData.hsnCode = dto.hsnCode?.trim() || hsnDoc.hsnCode;
+        } else {
+          updateData.hsnCodeId = null;
+          updateData.hsnCode = "";
+        }
+      } else if (dto.hsnCode !== undefined) {
+        updateData.hsnCode = dto.hsnCode.trim();
       }
 
       if (dto.name !== undefined) updateData.name = dto.name.trim();

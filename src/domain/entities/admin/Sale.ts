@@ -37,6 +37,9 @@ export class SaleItem {
   @prop({ type: String, trim: true, default: "" })
   public lotNo!: string;
 
+  @prop({ type: String, trim: true, default: "" })
+  public hsnCode?: string;
+
   @prop({ ref: () => UnitOfMeasurement, required: true })
   public uomId!: Ref<UnitOfMeasurement>;
 
@@ -85,6 +88,10 @@ export class Sale {
 
   @prop({ required: true, trim: true })
   public salesNumber!: string;
+
+  // Custom/Manual Invoice Number entered during sales billing
+  @prop({ type: String, trim: true, default: "" })
+  public invoiceNo!: string;
 
   @prop({ required: true })
   public date!: Date;

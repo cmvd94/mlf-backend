@@ -8,6 +8,7 @@ import { PerUnitRepository } from "@/infrastructure/repositories/admin/PerUnitRe
 import { ItemGroupRepository } from "@/infrastructure/repositories/admin/ItemGroupRepository";
 import { ItemRepository } from "@/infrastructure/repositories/admin/ItemRepository";
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
+import { HsnCodeRepository } from "@/infrastructure/repositories/admin/HsnCodeRepository";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { SuperAdmin } from "@/shared/constants/adminRole";
 import { generateGodownQuery } from "@/shared/utils/godownQueryHelper";
@@ -25,6 +26,7 @@ export class GetMastersUseCase {
     @inject(ItemGroupRepository) private itemGroupRepository: ItemGroupRepository,
     @inject(ItemRepository) private itemRepository: ItemRepository,
     @inject(GodownRepository) private godownRepository: GodownRepository,
+    @inject(HsnCodeRepository) private hsnCodeRepository: HsnCodeRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -36,7 +38,7 @@ export class GetMastersUseCase {
         accessibleGodownsQuery = hasAccess ? query : null;
       }
 
-      const [parties, purchaseTypes, salesTypes, uoms, perUnits, itemGroups, items, godowns] = await Promise.all([
+      const [parties, purchaseTypes, salesTypes, uoms, perUnits, itemGroups, items, godowns, hsnCodes] = await Promise.all([
         this.partyRepository.getAllActiveParties(),
         this.purchaseTypeRepository.getAllActivePurchaseTypes(),
         this.salesTypeRepository.getAllActiveSalesTypes(),
@@ -47,6 +49,7 @@ export class GetMastersUseCase {
         accessibleGodownsQuery
           ? this.godownRepository.getAllGodownsByQuery(accessibleGodownsQuery)
           : Promise.resolve([]),
+        this.hsnCodeRepository.getAllActiveHsnCodes(),
       ]);
 
       return {
@@ -58,6 +61,7 @@ export class GetMastersUseCase {
         itemGroups,
         items,
         godowns,
+        hsnCodes,
       };
     } catch (error) {
       ErrorHandler.handleError(error, AdminErrorStage.AccountInventoryController, this.logger);
