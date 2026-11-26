@@ -10,6 +10,9 @@ export interface CreateGodownDTO {
   state: string;
   district: string;
   pincode: string;
+  address?: string;
+  gstin?: string;
+  phoneNumber?: string;
   godownManagerId?: string | null;
   supervisorId?: string[] | null;
   assistantId?: string[] | null;
@@ -22,6 +25,9 @@ export interface UpdateGodownDTO {
   godownId?: string;
   type?: GodownType;
   description?: string;
+  address?: string;
+  gstin?: string;
+  phoneNumber?: string;
   isActive?: boolean;
   godownManagerId?: string | null;
   supervisorId?: string[];

@@ -482,6 +482,7 @@ export class UpdatePurchaseUseCase {
                 unusedDoc._id,
                 {
                   currentStock: 0,
+                  isActive: false,
                   isDeleted: true,
                   updatedBy: reqAdmin.userId,
                 },

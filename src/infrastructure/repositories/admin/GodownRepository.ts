@@ -447,7 +447,7 @@ export class GodownRepository {
   async getAllGodownsByQuery(query: any = {}) {
     try {
       return await GodownModel.find({ ...query, isDeleted: false })
-        .select("_id godownId name type country zone state district pincode isActive")
+        .select("_id godownId name type country zone state district pincode address gstin phoneNumber isActive")
         .sort({ name: 1 })
         .lean();
     } catch (error) {

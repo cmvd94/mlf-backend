@@ -38,6 +38,7 @@ export const CreateStockTransferRouteSchema = z.object({
     sourceItems: z.array(StockTransferSourceItemSchema).min(1, "At least one source item is required for transfer"),
     destinationItems: z.array(StockTransferDestinationItemSchema).min(1, "At least one destination item is required for transfer"),
     narration: z.string().trim().max(1000).optional(),
+    isGst: z.boolean().optional().default(false),
   }),
 });
 
@@ -50,6 +51,7 @@ export const UpdateStockTransferRouteSchema = z.object({
     sourceItems: z.array(StockTransferSourceItemSchema).optional(),
     destinationItems: z.array(StockTransferDestinationItemSchema).optional(),
     narration: z.string().trim().max(1000).optional(),
+    isGst: z.boolean().optional(),
   }),
 });
 

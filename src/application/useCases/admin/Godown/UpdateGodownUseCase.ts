@@ -73,6 +73,9 @@ export class UpdateGodownUseCase {
       if (data.godownId !== undefined) updatePayload.godownId = data.godownId;
       if (data.type !== undefined) updatePayload.type = data.type;
       if (data.description !== undefined) updatePayload.description = data.description;
+      if (data.address !== undefined) updatePayload.address = data.address.trim();
+      if (data.gstin !== undefined) updatePayload.gstin = data.gstin.trim();
+      if (data.phoneNumber !== undefined) updatePayload.phoneNumber = data.phoneNumber.trim();
       if (data.isActive !== undefined) updatePayload.isActive = data.isActive;
 
       const effectiveType = data.type ?? existing.type;

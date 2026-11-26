@@ -23,6 +23,9 @@ export const UpdateGodownRouteSchema = z.object({
       .optional(),
     type: z.nativeEnum(GodownType).optional(),
     description: z.string().trim().max(1000).optional(),
+    address: z.string().trim().max(500, "Address is too long").optional(),
+    gstin: z.string().trim().max(30, "GSTIN is too long").optional(),
+    phoneNumber: z.string().trim().max(20, "Phone number is too long").optional(),
     isActive: z.boolean().optional(),
     // Assigned users updates:
     godownManagerId: z

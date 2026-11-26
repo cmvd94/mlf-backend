@@ -22,11 +22,11 @@ export enum GodownType {
 })
 @index(
   { name: 1 },
-  { unique: true, partialFilterExpression: { isDeleted: false } }
+  { unique: true, partialFilterExpression: { isDeleted: false } },
 )
 @index(
   { godownId: 1 },
-  { unique: true, partialFilterExpression: { isDeleted: false } }
+  { unique: true, partialFilterExpression: { isDeleted: false } },
 )
 @index({ pincode: 1 }, { partialFilterExpression: { isDeleted: false } })
 export class Godown {
@@ -60,6 +60,15 @@ export class Godown {
 
   @prop({ required: true })
   public pincode!: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public address?: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public gstin?: string;
+
+  @prop({ type: String, trim: true, default: "" })
+  public phoneNumber?: string;
 
   // Assigned Admins (all optional):
   // Godown Manager (single user)

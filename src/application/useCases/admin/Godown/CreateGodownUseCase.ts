@@ -300,6 +300,9 @@ export class CreateGodownUseCase {
           state: data.state,
           district: data.district,
           pincode: data.pincode,
+          address: data.address?.trim() || "",
+          gstin: data.gstin?.trim() || "",
+          phoneNumber: data.phoneNumber?.trim() || "",
           godownManagerId: data.godownManagerId
             ? generateObjectId(data.godownManagerId)
             : undefined,

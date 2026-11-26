@@ -155,7 +155,10 @@ export class GodownStockRepository {
       { _id: stockObjectId, isDeleted: false },
       {
         $inc: incUpdate,
-        ...(adminObjectId ? { $set: { updatedBy: adminObjectId as any } } : {}),
+        $set: {
+          isActive: true,
+          ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
+        },
       },
       { new: true, session }
     ).lean();
@@ -217,6 +220,7 @@ export class GodownStockRepository {
       {
         $set: {
           currentStock: 0,
+          isActive: false,
           isDeleted: true,
           ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
         },
@@ -241,6 +245,7 @@ export class GodownStockRepository {
       {
         $set: {
           currentStock: 0,
+          isActive: false,
           isDeleted: true,
           ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
         },
@@ -265,11 +270,37 @@ export class GodownStockRepository {
       {
         $set: {
           currentStock: 0,
+          isActive: false,
           isDeleted: true,
           ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
         },
       },
       { session }
+    );
+  }
+
+  /**
+   * Delete or soft-delete a specific stock record by ID
+   */
+  async deleteById(
+    id: string | Types.ObjectId,
+    adminId?: string | Types.ObjectId,
+    session?: ClientSession
+  ) {
+    const stockObjectId = typeof id === "string" ? generateObjectId(id) : id;
+    const adminObjectId = adminId ? (typeof adminId === "string" ? generateObjectId(adminId) : adminId) : undefined;
+
+    return await GodownStockModel.findByIdAndUpdate(
+      stockObjectId,
+      {
+        $set: {
+          currentStock: 0,
+          isActive: false,
+          isDeleted: true,
+          ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
+        },
+      },
+      { new: true, session }
     );
   }
 

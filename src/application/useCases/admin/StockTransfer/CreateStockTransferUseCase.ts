@@ -326,6 +326,7 @@ export class CreateStockTransferUseCase {
             totalSourceQuantity,
             totalDestinationQuantity,
             narration: dto.narration?.trim() || "",
+            isGst: Boolean(dto.isGst),
             isActive: true,
             createdBy: generateObjectId(reqAdmin.userId) as any,
           },

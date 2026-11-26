@@ -83,6 +83,9 @@ export class UpdateStockTransferUseCase {
         if (dto.narration !== undefined) {
           updateFields.narration = dto.narration.trim();
         }
+        if (dto.isGst !== undefined) {
+          updateFields.isGst = dto.isGst;
+        }
 
         await this.stockTransferRepository.updateStockTransfer(id, updateFields);
         return await this.stockTransferRepository.getStockTransferById(id);
@@ -180,7 +183,7 @@ export class UpdateStockTransferUseCase {
           if (reqUomQty <= 0) {
             throw new HttpException(400, "Source UOM quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
           }
-          if (availableUomStock > 0 && reqUomQty > availableUomStock) {
+          if (stockDoc.uomId && reqUomQty > availableUomStock) {
             throw new HttpException(
               400,
               `Insufficient UOM quantity for DC '${srcDcNo || "N/A"}'. Available: ${availableUomStock}, Requested: ${reqUomQty}`,
@@ -386,6 +389,7 @@ export class UpdateStockTransferUseCase {
           totalSourceQuantity,
           totalDestinationQuantity,
           narration: dto.narration !== undefined ? dto.narration.trim() : existingTransfer.narration,
+          isGst: dto.isGst !== undefined ? dto.isGst : (existingTransfer.isGst ?? false),
           updatedBy: generateObjectId(reqAdmin.userId),
         };
 

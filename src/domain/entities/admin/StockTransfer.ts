@@ -136,6 +136,9 @@ export class StockTransfer {
   @prop({ type: String, trim: true, default: "" })
   public narration!: string;
 
+  @prop({ default: false })
+  public isGst!: boolean;
+
   @prop({ default: true })
   public isActive!: boolean;
 

@@ -33,6 +33,9 @@ export const CreateGodownRouteSchema = z.object({
       .string()
       .trim()
       .regex(/^\d{6}$/, "Pin code must be 6 digits"),
+    address: z.string().trim().max(500, "Address is too long").optional(),
+    gstin: z.string().trim().max(30, "GSTIN is too long").optional(),
+    phoneNumber: z.string().trim().max(20, "Phone number is too long").optional(),
     // Assigned users (all optional; not required / not allowed for jobwork godown):
     // godown manager single user
     godownManagerId: z

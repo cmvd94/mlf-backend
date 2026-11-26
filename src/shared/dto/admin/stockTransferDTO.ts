@@ -25,6 +25,7 @@ export interface CreateStockTransferDTO {
   sourceItems: CreateStockTransferSourceItemDTO[];
   destinationItems: CreateStockTransferDestinationItemDTO[];
   narration?: string;
+  isGst?: boolean;
 }
 
 export interface UpdateStockTransferDTO {
@@ -32,6 +33,7 @@ export interface UpdateStockTransferDTO {
   sourceItems?: CreateStockTransferSourceItemDTO[];
   destinationItems?: CreateStockTransferDestinationItemDTO[];
   narration?: string;
+  isGst?: boolean;
 }
 
 export interface GetStockTransferListQueryDTO {
