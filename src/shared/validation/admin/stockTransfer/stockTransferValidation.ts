@@ -29,8 +29,6 @@ export const StockTransferDestinationItemSchema = z.preprocess(
     uomId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid UOM ID").optional(),
     uomQuantity: z.number().positive("UOM quantity must be greater than 0").optional(),
     perId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Per Unit ID").optional(),
-    destinationGodownStockId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Destination Godown Stock ID").optional(),
-    godownStockId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Godown Stock ID").optional(),
   })
 );
 

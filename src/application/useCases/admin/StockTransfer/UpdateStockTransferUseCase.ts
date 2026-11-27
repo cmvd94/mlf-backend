@@ -99,6 +99,20 @@ export class UpdateStockTransferUseCase {
         throw new HttpException(400, "At least one destination item is required for transfer", ERROR_CODES.VALIDATION_ERROR);
       }
 
+      // Check whether any existing destination batches have already been consumed
+      const existingStockDocs = await this.godownStockRepository.findByStockTransferId(existingTransfer._id);
+      for (const stock of existingStockDocs) {
+        const initial = Number(stock.initialStock !== undefined ? stock.initialStock : stock.currentStock) || 0;
+        if (Number(stock.currentStock) < initial) {
+          const label = stock.dcNo || (stock as any).batchNo || "N/A";
+          throw new HttpException(
+            400,
+            `Cannot update stock transfer because destination stock for DC "${label}" has already been transferred or consumed.`,
+            ERROR_CODES.INSUFFICIENT_STOCK
+          );
+        }
+      }
+
       // Map existing consumption per source batch to credit back during availability check
       const oldQtyByStockId = new Map<string, number>();
       const oldUomQtyByStockId = new Map<string, number>();
@@ -261,55 +275,49 @@ export class UpdateStockTransferUseCase {
           uomQuantity,
           perId,
           rate: dest.rate !== undefined ? Number(dest.rate) : 0,
-          destinationGodownStockId: dest.destinationGodownStockId || (dest as any).godownStockId,
         });
       }
 
-      // 3. Atomically execute in-place reconciliation of godown stocks and update of stock transfer
+      // 3. Atomically execute reversion of old transfer and application of new transfer
       await withTransaction(async (session: ClientSession) => {
-        // A. Source Items Reconciliation (Net Delta per source batch)
-        const oldSrcMap = new Map<
-          string,
-          {
-            qty: number;
-            uomQty: number;
-            itemId: string;
-            godownId: string;
-            companyGodownId: string;
-            dcNo: string;
-            lotNo: string;
-            rate: number;
-            uomId?: string;
-            perId?: string;
-          }
-        >();
-        for (const oldSrc of existingTransfer.sourceItems || []) {
-          const oldStockId = (oldSrc.godownStockId?._id || oldSrc.godownStockId).toString();
-          const oldItemId = (oldSrc.itemId?._id || oldSrc.itemId).toString();
-          oldSrcMap.set(oldStockId, {
-            qty: Number(oldSrc.quantity || 0),
-            uomQty: Number(oldSrc.uomQuantity || 0),
-            itemId: oldItemId,
-            godownId: (oldSrc.godownId?._id || oldSrc.godownId)?.toString() || "",
-            companyGodownId: (oldSrc.companyGodownId?._id || oldSrc.companyGodownId)?.toString() || "",
-            dcNo: oldSrc.dcNo || "",
-            lotNo: oldSrc.lotNo || "",
-            rate: oldSrc.rate || 0,
-            uomId: (oldSrc.uomId?._id || oldSrc.uomId)?.toString(),
-            perId: (oldSrc.perId?._id || oldSrc.perId)?.toString(),
-          });
+        // A. Revert old destination
+        for (const dest of existingTransfer.destinationItems || []) {
+          const destItemId = (dest.itemId?._id || dest.itemId).toString();
+          const destQty = Number(dest.quantity) || 0;
+          await this.itemRepository.adjustStockQuantity(destItemId, -destQty, session);
+        }
+        await this.godownStockRepository.deleteByStockTransferId(existingTransfer._id, reqAdmin.userId, session);
+
+        // B. Revert old source
+        for (const src of existingTransfer.sourceItems || []) {
+          const srcStockId = (src.godownStockId?._id || src.godownStockId).toString();
+          const srcItemId = (src.itemId?._id || src.itemId).toString();
+          const srcQty = Number(src.quantity) || 0;
+          const srcUomQty = Number(src.uomQuantity) || 0;
+
+          await this.godownStockRepository.increaseStock(srcStockId, srcQty, reqAdmin.userId, session, srcUomQty);
+          await this.itemRepository.adjustStockQuantity(srcItemId, srcQty, session);
         }
 
-        const newSrcMap = new Map<string, { qty: number; uomQty: number; itemId: string }>();
+        // C. Apply new source deductions
         const calculatedSourceItems: any[] = [];
-
         for (const src of preparedSourceItems) {
-          const stockId = src.stockDocId.toString();
-          newSrcMap.set(stockId, {
-            qty: src.requestedQty,
-            uomQty: src.uomQuantity,
-            itemId: src.sourceItemId,
-          });
+          const updatedStock = await this.godownStockRepository.decreaseStock(
+            src.stockDocId,
+            src.requestedQty,
+            reqAdmin.userId,
+            session,
+            src.uomQuantity
+          );
+          if (!updatedStock) {
+            throw new HttpException(
+              400,
+              `Could not deduct stock for DC '${src.dcNo || "N/A"}'. Stock may have changed.`,
+              ERROR_CODES.INSUFFICIENT_STOCK
+            );
+          }
+
+          await this.itemRepository.adjustStockQuantity(src.sourceItemId, -src.requestedQty, session);
 
           calculatedSourceItems.push({
             godownStockId: src.stockDocId,
@@ -326,273 +334,54 @@ export class UpdateStockTransferUseCase {
           });
         }
 
-        // Apply source adjustments:
-        // 1) Adjust source batches present in new transfer
-        for (const [stockId, newSrc] of newSrcMap.entries()) {
-          const oldSrc = oldSrcMap.get(stockId);
-          if (oldSrc) {
-            const qtyDelta = newSrc.qty - oldSrc.qty;
-            const uomDelta = newSrc.uomQty - oldSrc.uomQty;
-
-            if (qtyDelta > 0) {
-              // Transfer increased: deduct additional stock from source
-              const updated = await this.godownStockRepository.decreaseStock(
-                stockId,
-                qtyDelta,
-                reqAdmin.userId,
-                session,
-                uomDelta > 0 ? uomDelta : undefined
-              );
-              if (!updated) {
-                throw new HttpException(
-                  400,
-                  "Could not deduct additional stock from source godown batch. Stock may have changed.",
-                  ERROR_CODES.INSUFFICIENT_STOCK
-                );
-              }
-              await this.itemRepository.adjustStockQuantity(newSrc.itemId, -qtyDelta, session);
-            } else if (qtyDelta < 0) {
-              // Transfer reduced: return stock to source batch
-              await this.godownStockRepository.increaseStock(
-                stockId,
-                Math.abs(qtyDelta),
-                reqAdmin.userId,
-                session,
-                uomDelta < 0 ? Math.abs(uomDelta) : undefined
-              );
-              await this.itemRepository.adjustStockQuantity(newSrc.itemId, Math.abs(qtyDelta), session);
-            }
-          } else {
-            // Brand new source batch
-            const updated = await this.godownStockRepository.decreaseStock(
-              stockId,
-              newSrc.qty,
-              reqAdmin.userId,
-              session,
-              newSrc.uomQty > 0 ? newSrc.uomQty : undefined
-            );
-            if (!updated) {
-              throw new HttpException(
-                400,
-                "Could not deduct stock from source godown batch. Stock may have changed.",
-                ERROR_CODES.INSUFFICIENT_STOCK
-              );
-            }
-            await this.itemRepository.adjustStockQuantity(newSrc.itemId, -newSrc.qty, session);
-          }
-        }
-
-        // 2) Revert source batches that were removed from transfer
-        for (const [stockId, oldSrc] of oldSrcMap.entries()) {
-          if (!newSrcMap.has(stockId)) {
-            await this.godownStockRepository.increaseStock(
-              stockId,
-              oldSrc.qty,
-              reqAdmin.userId,
-              session,
-              oldSrc.uomQty > 0 ? oldSrc.uomQty : undefined
-            );
-            await this.itemRepository.adjustStockQuantity(oldSrc.itemId, oldSrc.qty, session);
-          }
-        }
-
-        // B. Destination Items In-Place Reconciliation (no duplicate GodownStock records)
-        const existingDestStockDocs = await this.godownStockRepository.findByStockTransferId(existingTransfer._id);
-        const usedDestStockDocIds = new Set<string>();
+        // D. Apply new destination batches
         const calculatedDestinationItems: any[] = [];
         const primaryCompanyGodownId = preparedSourceItems[0]?.companyGodownId;
 
-        for (let i = 0; i < preparedDestItems.length; i++) {
-          const dest = preparedDestItems[i];
+        for (const dest of preparedDestItems) {
           const destCompanyGodownId = primaryCompanyGodownId
             ? generateObjectId(primaryCompanyGodownId)
             : dest.destGodownId;
 
-          let matchedDoc: any = null;
-
-          // 1. Explicit destinationGodownStockId match
-          if (dest.destinationGodownStockId) {
-            matchedDoc = existingDestStockDocs.find(
-              (doc: any) =>
-                doc._id.toString() === dest.destinationGodownStockId &&
-                !usedDestStockDocIds.has(doc._id.toString())
-            );
-          }
-
-          // 2. Existing destination item's stored destinationGodownStockId match
-          if (!matchedDoc && existingTransfer.destinationItems && existingTransfer.destinationItems[i]) {
-            const oldDest = existingTransfer.destinationItems[i];
-            const oldStockId = (oldDest.destinationGodownStockId?._id || oldDest.destinationGodownStockId)?.toString();
-            if (oldStockId) {
-              const candidate = existingDestStockDocs.find(
-                (doc: any) => doc._id.toString() === oldStockId && !usedDestStockDocIds.has(doc._id.toString())
-              );
-              if (
-                candidate &&
-                (candidate.itemId?._id || candidate.itemId).toString() === dest.destItemId.toString() &&
-                (candidate.godownId?._id || candidate.godownId).toString() === dest.destGodownId.toString()
-              ) {
-                matchedDoc = candidate;
-              }
-            }
-          }
-
-          // 3. Match position index i in existingDestStockDocs if same itemId and godownId
-          if (!matchedDoc && i < existingDestStockDocs.length) {
-            const candidate = existingDestStockDocs[i];
-            if (
-              !usedDestStockDocIds.has(candidate._id.toString()) &&
-              (candidate.itemId?._id || candidate.itemId).toString() === dest.destItemId.toString() &&
-              (candidate.godownId?._id || candidate.godownId).toString() === dest.destGodownId.toString()
-            ) {
-              matchedDoc = candidate;
-            }
-          }
-
-          // 4. Fallback: match any unused doc in existingDestStockDocs with same itemId and godownId
-          if (!matchedDoc) {
-            matchedDoc = existingDestStockDocs.find(
-              (doc: any) =>
-                !usedDestStockDocIds.has(doc._id.toString()) &&
-                (doc.itemId?._id || doc.itemId).toString() === dest.destItemId.toString() &&
-                (doc.godownId?._id || doc.godownId).toString() === dest.destGodownId.toString()
-            );
-          }
-
-          if (matchedDoc) {
-            usedDestStockDocIds.add(matchedDoc._id.toString());
-
-            const oldQty = Number(
-              matchedDoc.initialStock !== undefined ? matchedDoc.initialStock : matchedDoc.currentStock
-            ) || 0;
-            const newQty = Number(dest.destQty);
-            const qtyDelta = newQty - oldQty;
-
-            // Prevent reduction below already transferred/consumed stock
-            if (Number(matchedDoc.currentStock) + qtyDelta < 0) {
-              const label = dest.dcNo || matchedDoc.dcNo || matchedDoc.batchNo || "N/A";
-              throw new HttpException(
-                400,
-                `Cannot reduce destination stock for DC "${label}" below already transferred or consumed quantity. Current remaining: ${matchedDoc.currentStock}, reduction requested: ${Math.abs(qtyDelta)}`,
-                ERROR_CODES.INSUFFICIENT_STOCK
-              );
-            }
-
-            const newCurrentStock = Number(matchedDoc.currentStock) + qtyDelta;
-
-            // Update existing destination GodownStock in-place (no duplicate doc created!)
-            await this.godownStockRepository.updateBatchStock(
-              matchedDoc._id,
-              {
-                godownId: dest.destGodownId,
-                companyGodownId: destCompanyGodownId,
-                itemId: dest.destItemId,
-                dcNo: dest.dcNo,
-                lotNo: dest.lotNo,
-                currentStock: newCurrentStock,
-                initialStock: newQty,
-                rate: dest.rate,
-                uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
-                uomQuantity: dest.uomQuantity,
-                perId: dest.perId ? generateObjectId(dest.perId) : undefined,
-                updatedBy: reqAdmin.userId,
-                isActive: true,
-                isDeleted: false,
-              },
-              session
-            );
-
-            if (qtyDelta !== 0) {
-              await this.itemRepository.adjustStockQuantity(dest.destItemId.toString(), qtyDelta, session);
-            }
-
-            calculatedDestinationItems.push({
-              itemId: dest.destItemId,
+          const createdBatchDoc = await this.godownStockRepository.createBatchStock(
+            {
               godownId: dest.destGodownId,
               companyGodownId: destCompanyGodownId,
+              itemId: dest.destItemId,
               dcNo: dest.dcNo,
               lotNo: dest.lotNo,
-              quantity: dest.destQty,
+              currentStock: dest.destQty,
+              initialStock: dest.destQty,
               rate: dest.rate,
               uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
               uomQuantity: dest.uomQuantity,
               perId: dest.perId ? generateObjectId(dest.perId) : undefined,
-              destinationGodownStockId: matchedDoc._id,
-            });
-          } else {
-            // Totally new item or godown: create a new GodownStock batch
-            const createdBatchDoc = await this.godownStockRepository.createBatchStock(
-              {
-                godownId: dest.destGodownId,
-                companyGodownId: destCompanyGodownId,
-                itemId: dest.destItemId,
-                dcNo: dest.dcNo,
-                lotNo: dest.lotNo,
-                currentStock: dest.destQty,
-                initialStock: dest.destQty,
-                rate: dest.rate,
-                uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
-                uomQuantity: dest.uomQuantity,
-                perId: dest.perId ? generateObjectId(dest.perId) : undefined,
-                stockTransferId: existingTransfer._id,
-                sourceType: StockSourceType.TRANSFER,
-                createdBy: reqAdmin.userId,
-                updatedBy: reqAdmin.userId,
-              },
-              session
-            );
+              stockTransferId: existingTransfer._id,
+              sourceType: StockSourceType.TRANSFER,
+              createdBy: reqAdmin.userId,
+              updatedBy: reqAdmin.userId,
+            },
+            session
+          );
 
-            await this.itemRepository.adjustStockQuantity(dest.destItemId.toString(), dest.destQty, session);
+          await this.itemRepository.adjustStockQuantity(dest.destItemId.toString(), dest.destQty, session);
 
-            calculatedDestinationItems.push({
-              itemId: dest.destItemId,
-              godownId: dest.destGodownId,
-              companyGodownId: destCompanyGodownId,
-              dcNo: dest.dcNo,
-              lotNo: dest.lotNo,
-              quantity: dest.destQty,
-              rate: dest.rate,
-              uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
-              uomQuantity: dest.uomQuantity,
-              perId: dest.perId ? generateObjectId(dest.perId) : undefined,
-              destinationGodownStockId: createdBatchDoc._id,
-            });
-          }
+          calculatedDestinationItems.push({
+            itemId: dest.destItemId,
+            godownId: dest.destGodownId,
+            companyGodownId: destCompanyGodownId,
+            dcNo: dest.dcNo,
+            lotNo: dest.lotNo,
+            quantity: dest.destQty,
+            rate: dest.rate,
+            uomId: dest.uomId ? generateObjectId(dest.uomId) : undefined,
+            uomQuantity: dest.uomQuantity,
+            perId: dest.perId ? generateObjectId(dest.perId) : undefined,
+            destinationGodownStockId: createdBatchDoc._id,
+          });
         }
 
-        // Soft-delete any unused old destination stock docs that were removed or replaced
-        for (const unusedDoc of existingDestStockDocs) {
-          if (!usedDestStockDocIds.has(unusedDoc._id.toString())) {
-            const initialQty = Number(
-              unusedDoc.initialStock !== undefined ? unusedDoc.initialStock : unusedDoc.currentStock
-            ) || 0;
-            if (Number(unusedDoc.currentStock) < initialQty) {
-              const label = unusedDoc.dcNo || (unusedDoc as any).batchNo || "N/A";
-              throw new HttpException(
-                400,
-                `Cannot remove destination item DC "${label}" because stock has already been transferred or consumed.`,
-                ERROR_CODES.INSUFFICIENT_STOCK
-              );
-            }
-
-            await this.godownStockRepository.updateBatchStock(
-              unusedDoc._id,
-              {
-                currentStock: 0,
-                initialStock: 0,
-                isActive: false,
-                isDeleted: true,
-                updatedBy: reqAdmin.userId,
-              },
-              session
-            );
-
-            const unusedItemId = (unusedDoc.itemId?._id || unusedDoc.itemId).toString();
-            await this.itemRepository.adjustStockQuantity(unusedItemId, -initialQty, session);
-          }
-        }
-
-        // C. Update StockTransfer voucher document
+        // E. Update StockTransfer voucher document
         const updateData: any = {
           date: dto.date ? parseVoucherDate(dto.date) : existingTransfer.date,
           sourceItems: calculatedSourceItems,

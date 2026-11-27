@@ -2,6 +2,7 @@ import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 import { GodownStockRepository } from "@/infrastructure/repositories/admin/GodownStockRepository";
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
+import { SaleRepository } from "@/infrastructure/repositories/admin/SaleRepository";
 import { GetAvailableStockForSaleQueryDTO } from "@/shared/dto/admin/saleDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateGodownQuery, compareAdminAndGodownLocation, validateStockModificationAccessWithFetch } from "@/shared/utils/godownQueryHelper";
@@ -15,6 +16,7 @@ export class GetAvailableStockForSaleUseCase {
   constructor(
     @inject(GodownStockRepository) private godownStockRepository: GodownStockRepository,
     @inject(GodownRepository) private godownRepository: GodownRepository,
+    @inject(SaleRepository) private saleRepository: SaleRepository,
     @inject("AdminLogger") private logger: Logger
   ) {}
 
@@ -50,10 +52,24 @@ export class GetAvailableStockForSaleUseCase {
         return [];
       }
 
+      let existingSaleItems: any[] = [];
+      let saleStockIds: string[] = [];
+      if (dto.saleId && dto.saleId.trim().length > 0) {
+        const sale: any = await this.saleRepository.getSaleById(dto.saleId.trim());
+        if (sale && !sale.isDeleted) {
+          existingSaleItems = sale.items || [];
+          saleStockIds = existingSaleItems
+            .map((it) => (it.godownStockId?._id || it.godownStockId)?.toString())
+            .filter(Boolean);
+        }
+      }
+
       const stocks = await this.godownStockRepository.getAvailableStocks(
         targetGodownIds,
         dto.itemId,
-        dto.search
+        dto.search,
+        undefined,
+        saleStockIds
       );
 
       // Filter stocks by company godown ownership & stock modification permission
@@ -102,7 +118,20 @@ export class GetAvailableStockForSaleUseCase {
           rate = Number(s.itemId.standardRate) || 0;
         }
 
-        const qty = Number(s.currentStock) || 0;
+        let addedQty = 0;
+        let addedUomQty = 0;
+        for (const it of existingSaleItems) {
+          const itStockId = (it.godownStockId?._id || it.godownStockId)?.toString();
+          if (itStockId === s._id.toString()) {
+            addedQty += Number(it.actualQuantity ?? it.quantity ?? 0);
+            addedUomQty += Number(it.uomQuantity ?? 0);
+          }
+        }
+
+        const currentStockVal = Number(s.currentStock || 0);
+        const currentUomVal = typeof s.uomQuantity === "number" ? s.uomQuantity : (Number(s.uomQuantity) || 0);
+        const qty = Number((currentStockVal + addedQty).toFixed(4));
+        const uomQuantity = Number((currentUomVal + addedUomQty).toFixed(4));
         const amount = Number((qty * rate).toFixed(2));
 
         return {
@@ -125,7 +154,7 @@ export class GetAvailableStockForSaleUseCase {
           uomId: s.uomId?._id?.toString() || s.uomId?.toString() || "",
           uomName: s.uomId?.name || "",
           uomSymbol: s.uomId?.symbol || "",
-          uomQuantity: s.uomQuantity || 1,
+          uomQuantity,
           perId: s.perId?._id?.toString() || s.perId?.toString() || s.itemId?.defaultPerId?._id?.toString() || s.itemId?.defaultPerId?.toString() || "",
           perName: s.perId?.name || s.itemId?.defaultPerId?.name || "",
           perSymbol: s.perId?.symbol || s.itemId?.defaultPerId?.symbol || "",

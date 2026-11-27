@@ -141,7 +141,13 @@ export class UpdatePurchaseUseCase {
         updateData.notes = dto.notes.trim();
       }
 
-      const effectiveCompanyGodownId = updateData.companyGodownId || (existingPurchase.companyGodownId?._id || existingPurchase.companyGodownId || existingPurchase.godownId?._id || existingPurchase.godownId);
+      const effectiveCompanyGodownId = generateObjectId(
+        updateData.companyGodownId ||
+        (existingPurchase.companyGodownId?._id ||
+          existingPurchase.companyGodownId ||
+          existingPurchase.godownId?._id ||
+          existingPurchase.godownId)
+      );
 
       // 5. If items are being updated, reconcile stock and calculate amounts
       if (dto.items && Array.isArray(dto.items) && dto.items.length > 0) {
@@ -150,7 +156,8 @@ export class UpdatePurchaseUseCase {
         let totalActualQuantity = 0;
         let totalBilledQuantity = 0;
 
-        for (const itemDto of dto.items) {
+        for (let i = 0; i < dto.items.length; i++) {
+          const itemDto = dto.items[i];
           const targetGodownId = itemDto.godownId;
           if (!targetGodownId) {
             throw new HttpException(400, "Godown ID is required for each item", ERROR_CODES.VALIDATION_ERROR);
@@ -203,7 +210,14 @@ export class UpdatePurchaseUseCase {
           totalActualQuantity += actualQty;
           totalBilledQuantity += billedQty;
 
+          const itemSubdocId = itemDto._id
+            ? generateObjectId(itemDto._id)
+            : (existingPurchase.items?.[i]?._id
+              ? generateObjectId(existingPurchase.items[i]._id)
+              : generateObjectId());
+
           calculatedItems.push({
+            _id: itemSubdocId,
             itemId: generateObjectId(itemDto.itemId) as any,
             godownId: generateObjectId(targetGodownId) as any,
             companyGodownId: effectiveCompanyGodownId,
@@ -419,18 +433,23 @@ export class UpdatePurchaseUseCase {
               await this.godownStockRepository.updateBatchStock(
                 matchedStockDoc._id,
                 {
-                  godownId: newIt.godownId,
+                  godownId: generateObjectId(newIt.godownId),
                   companyGodownId: effectiveCompanyGodownId,
-                  itemId: newIt.itemId,
+                  itemId: generateObjectId(newIt.itemId),
                   dcNo: newIt.dcNo,
                   lotNo: newIt.lotNo,
                   currentStock: Number(matchedStockDoc.currentStock + qtyDelta),
-                  initialStock: newIt.actualQuantity,
-                  uomId: newIt.uomId,
-                  uomQuantity: newIt.uomQuantity,
-                  perId: newIt.perId,
-                  updatedBy: reqAdmin.userId,
+                  initialStock: Number(newIt.actualQuantity),
+                  rate: Number(newIt.rate),
+                  uomId: generateObjectId(newIt.uomId),
+                  uomQuantity: Number(newIt.uomQuantity),
+                  perId: generateObjectId(newIt.perId),
+                  purchaseId: existingPurchase._id,
+                  purchaseItemId: newIt._id,
+                  sourceType: StockSourceType.PURCHASE,
+                  isActive: true,
                   isDeleted: false,
+                  updatedBy: generateObjectId(reqAdmin.userId),
                 },
                 session
               );
@@ -438,21 +457,22 @@ export class UpdatePurchaseUseCase {
               // New item row: create new GodownStock doc
               const stockDoc = await this.godownStockRepository.createBatchStock(
                 {
-                  godownId: newIt.godownId,
+                  godownId: generateObjectId(newIt.godownId),
                   companyGodownId: effectiveCompanyGodownId,
-                  itemId: newIt.itemId,
+                  itemId: generateObjectId(newIt.itemId),
                   dcNo: newIt.dcNo,
                   lotNo: newIt.lotNo,
-                  currentStock: newIt.actualQuantity,
-                  initialStock: newIt.actualQuantity,
-                  rate: newIt.rate,
-                  uomId: newIt.uomId,
-                  uomQuantity: newIt.uomQuantity,
-                  perId: newIt.perId,
+                  currentStock: Number(newIt.actualQuantity),
+                  initialStock: Number(newIt.actualQuantity),
+                  rate: Number(newIt.rate),
+                  uomId: generateObjectId(newIt.uomId),
+                  uomQuantity: Number(newIt.uomQuantity),
+                  perId: generateObjectId(newIt.perId),
                   purchaseId: existingPurchase._id,
+                  purchaseItemId: newIt._id,
                   sourceType: StockSourceType.PURCHASE,
-                  createdBy: reqAdmin.userId,
-                  updatedBy: reqAdmin.userId,
+                  createdBy: generateObjectId(reqAdmin.userId),
+                  updatedBy: generateObjectId(reqAdmin.userId),
                 },
                 session
               );
@@ -484,7 +504,7 @@ export class UpdatePurchaseUseCase {
                   currentStock: 0,
                   isActive: false,
                   isDeleted: true,
-                  updatedBy: reqAdmin.userId,
+                  updatedBy: generateObjectId(reqAdmin.userId),
                 },
                 session
               );
@@ -492,6 +512,11 @@ export class UpdatePurchaseUseCase {
               const oldItemId = (unusedDoc.itemId?._id || unusedDoc.itemId).toString();
               await this.itemRepository.adjustStockQuantity(oldItemId, -initialQty, session);
             }
+          }
+
+          // Ensure mirror fields have godownStockId
+          if (calculatedItems.length > 0 && (calculatedItems[0] as any).godownStockId) {
+            updateData.godownStockId = (calculatedItems[0] as any).godownStockId;
           }
 
           // Update purchase record in database
@@ -530,9 +555,29 @@ export class UpdatePurchaseUseCase {
         updateData.gstAmount = gstAmount;
         updateData.totalAmount = totalAmount;
 
-        await this.purchaseRepository.updatePurchase(id, updateData);
+        await withTransaction(async (session: ClientSession) => {
+          if (updateData.companyGodownId) {
+            await this.godownStockRepository.updateCompanyGodownForPurchase(
+              existingPurchase._id,
+              updateData.companyGodownId,
+              reqAdmin.userId,
+              session
+            );
+          }
+          await this.purchaseRepository.updatePurchase(id, updateData, session);
+        });
       } else {
-        await this.purchaseRepository.updatePurchase(id, updateData);
+        await withTransaction(async (session: ClientSession) => {
+          if (updateData.companyGodownId) {
+            await this.godownStockRepository.updateCompanyGodownForPurchase(
+              existingPurchase._id,
+              updateData.companyGodownId,
+              reqAdmin.userId,
+              session
+            );
+          }
+          await this.purchaseRepository.updatePurchase(id, updateData, session);
+        });
       }
 
       // 7. Return refreshed populated purchase

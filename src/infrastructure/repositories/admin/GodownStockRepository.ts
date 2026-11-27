@@ -47,6 +47,9 @@ export class GodownStockRepository {
       isDeleted: false,
     };
 
+    if (params.rate !== undefined) {
+      docData.rate = Number(params.rate) || 0;
+    }
     if (params.uomId) {
       docData.uomId = typeof params.uomId === "string" ? generateObjectId(params.uomId) : params.uomId;
     }
@@ -165,19 +168,90 @@ export class GodownStockRepository {
   }
 
   /**
+   * Adjusts stock and uomQuantity for a specific GodownStock doc atomically.
+   * actualDelta: positive increases stock (revert), negative decreases stock (deduct).
+   * uomDelta: positive increases uomQuantity (revert), negative decreases uomQuantity (deduct).
+   */
+  async adjustBatchStock(
+    godownStockId: string | Types.ObjectId,
+    actualDelta: number,
+    adminId?: string | Types.ObjectId,
+    session?: ClientSession,
+    uomDelta?: number
+  ): Promise<GodownStock | null> {
+    const stockObjectId = typeof godownStockId === "string" ? generateObjectId(godownStockId) : godownStockId;
+    const adminObjectId = adminId ? (typeof adminId === "string" ? generateObjectId(adminId) : adminId) : undefined;
+
+    const roundedActualDelta = Number(Number(actualDelta || 0).toFixed(4));
+    const roundedUomDelta = uomDelta !== undefined ? Number(Number(uomDelta).toFixed(4)) : undefined;
+
+    if (roundedActualDelta === 0 && (roundedUomDelta === undefined || roundedUomDelta === 0)) {
+      const query = GodownStockModel.findById(stockObjectId);
+      if (session) query.session(session);
+      return await query.lean();
+    }
+
+    const filter: any = {
+      _id: stockObjectId,
+      isDeleted: false,
+    };
+
+    // If deducting actual stock, ensure sufficient currentStock in DB
+    if (roundedActualDelta < 0) {
+      filter.currentStock = { $gte: Math.abs(roundedActualDelta) };
+    }
+
+    // If deducting UOM, ensure sufficient uomQuantity in DB
+    if (roundedUomDelta !== undefined && roundedUomDelta < 0) {
+      filter.uomQuantity = { $gte: Math.abs(roundedUomDelta) };
+    }
+
+    const incUpdate: any = {};
+    if (roundedActualDelta !== 0) {
+      incUpdate.currentStock = roundedActualDelta;
+    }
+    if (roundedUomDelta !== undefined && roundedUomDelta !== 0) {
+      incUpdate.uomQuantity = roundedUomDelta;
+    }
+
+    const setUpdate: any = {};
+    if (adminObjectId) {
+      setUpdate.updatedBy = adminObjectId as any;
+    }
+    // If returning actual stock, reactivate the batch if it was deactivated
+    if (roundedActualDelta > 0) {
+      setUpdate.isActive = true;
+    }
+
+    const updateDoc: any = { $inc: incUpdate };
+    if (Object.keys(setUpdate).length > 0) {
+      updateDoc.$set = setUpdate;
+    }
+
+    return await GodownStockModel.findOneAndUpdate(
+      filter,
+      updateDoc,
+      { new: true, session }
+    ).lean();
+  }
+
+  /**
    * Find a specific GodownStock by ID
    */
-  async findById(id: string | Types.ObjectId) {
+  async findById(id: string | Types.ObjectId, session?: ClientSession) {
     const stockObjectId = typeof id === "string" ? generateObjectId(id) : id;
-    return await GodownStockModel.findOne({ _id: stockObjectId, isDeleted: false })
+    const query = GodownStockModel.findOne({ _id: stockObjectId, isDeleted: false })
       .populate("godownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
       .populate("companyGodownId", "godownId name type country zone state district pincode isActive godownManagerId supervisorId assistantId billingUserId")
       .populate("itemId", "name itemCode defaultUomId defaultPerId standardRate")
       .populate("uomId", "name symbol")
       .populate("perId", "name symbol multiplier")
       .populate("purchaseId", "items")
-      .populate("stockTransferId", "sourceItems destinationItems")
-      .lean();
+      .populate("stockTransferId", "sourceItems destinationItems");
+    if (session) {
+      query.session(session);
+    }
+    return await query.lean();
   }
 
   /**
@@ -186,6 +260,31 @@ export class GodownStockRepository {
   async findByPurchaseId(purchaseId: string | Types.ObjectId) {
     const pObjectId = typeof purchaseId === "string" ? generateObjectId(purchaseId) : purchaseId;
     return await GodownStockModel.find({ purchaseId: pObjectId, isDeleted: false }).lean();
+  }
+
+  /**
+   * Updates companyGodownId on all stock docs for a purchase
+   */
+  async updateCompanyGodownForPurchase(
+    purchaseId: string | Types.ObjectId,
+    companyGodownId: string | Types.ObjectId,
+    updatedBy?: string | Types.ObjectId,
+    session?: ClientSession
+  ) {
+    const pObjectId = typeof purchaseId === "string" ? generateObjectId(purchaseId) : purchaseId;
+    const cgObjectId = typeof companyGodownId === "string" ? generateObjectId(companyGodownId) : companyGodownId;
+    const adminObjectId = updatedBy ? (typeof updatedBy === "string" ? generateObjectId(updatedBy) : updatedBy) : undefined;
+
+    return await GodownStockModel.updateMany(
+      { purchaseId: pObjectId },
+      {
+        $set: {
+          companyGodownId: cgObjectId,
+          ...(adminObjectId ? { updatedBy: adminObjectId as any } : {}),
+        },
+      },
+      { session }
+    );
   }
 
   /**
@@ -305,19 +404,30 @@ export class GodownStockRepository {
   }
 
   /**
-   * Get all available stocks (where currentStock > 0) in accessible godowns
+   * Get all available stocks (where currentStock > 0 or in includeStockIds) in accessible godowns
    */
-  async getAvailableStocks(godownIds: string[], itemId?: string, search?: string, companyGodownIds?: string[]) {
+  async getAvailableStocks(godownIds: string[], itemId?: string, search?: string, companyGodownIds?: string[], includeStockIds?: string[]) {
     if (!godownIds || godownIds.length === 0) return [];
 
     const godownObjectIds = godownIds.map((id) => generateObjectId(id));
     const allGodownIdVariants = [...godownObjectIds, ...godownIds];
 
+    const stockObjectIds = (includeStockIds || []).map((id) => generateObjectId(id));
+    const allStockVariants = [...stockObjectIds, ...(includeStockIds || [])];
+
     const matchQuery: any = {
       godownId: { $in: allGodownIdVariants },
-      currentStock: { $gt: 0 },
       isDeleted: false,
     };
+
+    if (allStockVariants.length > 0) {
+      matchQuery.$or = [
+        { currentStock: { $gt: 0 } },
+        { _id: { $in: allStockVariants } },
+      ];
+    } else {
+      matchQuery.currentStock = { $gt: 0 };
+    }
 
     if (companyGodownIds && companyGodownIds.length > 0) {
       const compObjectIds = companyGodownIds.map((id) => generateObjectId(id));
@@ -331,7 +441,13 @@ export class GodownStockRepository {
 
     if (search && search.trim().length > 0) {
       const regex = new RegExp(search.trim(), "i");
-      matchQuery.$or = [{ dcNo: regex }, { lotNo: regex }, { batchNo: regex }];
+      const searchOr = [{ dcNo: regex }, { lotNo: regex }, { batchNo: regex }];
+      if (matchQuery.$or) {
+        matchQuery.$and = [{ $or: matchQuery.$or }, { $or: searchOr }];
+        delete matchQuery.$or;
+      } else {
+        matchQuery.$or = searchOr;
+      }
     }
 
     return await GodownStockModel.find(matchQuery)

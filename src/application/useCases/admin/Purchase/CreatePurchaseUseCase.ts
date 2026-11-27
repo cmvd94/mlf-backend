@@ -160,6 +160,7 @@ export class CreatePurchaseUseCase {
         totalBilledQuantity += billedQty;
 
         calculatedItems.push({
+          _id: generateObjectId(),
           itemId: generateObjectId(itemDto.itemId) as any,
           godownId: generateObjectId(targetGodownId) as any,
           companyGodownId: companyGodown._id,
@@ -215,6 +216,7 @@ export class CreatePurchaseUseCase {
               uomQuantity: calculatedItem.uomQuantity,
               perId: calculatedItem.perId,
               purchaseId: purchaseObjectId,
+              purchaseItemId: (calculatedItem as any)._id,
               sourceType: StockSourceType.PURCHASE,
               createdBy: reqAdmin.userId,
               updatedBy: reqAdmin.userId,

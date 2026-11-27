@@ -149,221 +149,265 @@ export class UpdateSaleUseCase {
         partyId = generateObjectId(dto.partyId);
       }
 
-      // Execute stock reconciliation inside a transaction
-      await withTransaction(async (session: ClientSession) => {
-        // Step A: Revert old items stock
-        for (const oldIt of existingSale.items || []) {
-          const oldStockDocId = oldIt.godownStockId?._id || oldIt.godownStockId;
-          const oldQty = Number(oldIt.actualQuantity ?? oldIt.quantity) || 0;
-          const oldUomQty = Number(oldIt.uomQuantity) || 0;
-          const oldItemId = (oldIt.itemId?._id || oldIt.itemId).toString();
+      // Calculate previous deductions by this sale
+      const previousDeductions = new Map<string, { actualQty: number; uomQty: number; itemId: string }>();
+      for (const oldIt of existingSale.items || []) {
+        const sId = (oldIt.godownStockId?._id || oldIt.godownStockId).toString();
+        const prev = previousDeductions.get(sId) || { actualQty: 0, uomQty: 0, itemId: (oldIt.itemId?._id || oldIt.itemId).toString() };
+        prev.actualQty += Number(oldIt.actualQuantity ?? oldIt.quantity) || 0;
+        prev.uomQty += Number(oldIt.uomQuantity) || 0;
+        previousDeductions.set(sId, prev);
+      }
 
-          if (oldStockDocId && oldQty > 0) {
-            await this.godownStockRepository.increaseStock(
-              oldStockDocId,
-              oldQty,
-              reqAdmin.userId,
-              session,
-              oldUomQty
-            );
-          }
-          if (oldItemId && oldQty > 0) {
-            await this.itemRepository.adjustStockQuantity(oldItemId, oldQty, session);
-          }
+      const newDeductions = new Map<string, { actualQty: number; uomQty: number }>();
+      for (const itemInput of dto.items!) {
+        const sId = itemInput.godownStockId;
+        const reqQty = Number(itemInput.actualQuantity ?? itemInput.quantity ?? 0);
+        const reqUomQty = Number(itemInput.uomQuantity ?? 0);
+        const existingNew = newDeductions.get(sId) || { actualQty: 0, uomQty: 0 };
+        existingNew.actualQty += reqQty;
+        existingNew.uomQty += reqUomQty;
+        newDeductions.set(sId, existingNew);
+      }
+
+      // Validate new items against updated available stocks
+      const calculatedItems: any[] = [];
+      let subTotal = 0;
+      let totalActualQuantity = 0;
+      let totalBilledQuantity = 0;
+      let primaryCompanyGodownId = dto.companyGodownId || (existingSale.companyGodownId?._id || existingSale.companyGodownId)?.toString();
+
+      for (const itemInput of dto.items!) {
+        const stockDoc: any = await this.godownStockRepository.findById(itemInput.godownStockId);
+        if (!stockDoc || stockDoc.isDeleted) {
+          throw new HttpException(404, "Godown stock batch not found", ERROR_CODES.NOT_FOUND);
         }
 
-        // Step B: Validate new items against updated stocks
-        const calculatedItems: any[] = [];
-        let subTotal = 0;
-        let totalActualQuantity = 0;
-        let totalBilledQuantity = 0;
-        let primaryCompanyGodownId = dto.companyGodownId || (existingSale.companyGodownId?._id || existingSale.companyGodownId)?.toString();
+        const sourceGodown = stockDoc.godownId;
+        if (!sourceGodown || !sourceGodown.isActive) {
+          throw new HttpException(400, "Source godown is inactive or not found", ERROR_CODES.GODOWN_INACTIVE);
+        }
 
-        for (const itemInput of dto.items!) {
-          const stockDoc: any = await this.godownStockRepository.findById(itemInput.godownStockId);
-          if (!stockDoc || stockDoc.isDeleted) {
-            throw new HttpException(404, "Godown stock batch not found", ERROR_CODES.NOT_FOUND);
-          }
-
-          const sourceGodown = stockDoc.godownId;
-          if (!sourceGodown || !sourceGodown.isActive) {
-            throw new HttpException(400, "Source godown is inactive or not found", ERROR_CODES.GODOWN_INACTIVE);
-          }
-
-          const ownerCompanyGodown = stockDoc.companyGodownId || sourceGodown;
-          const canModifyStock = await validateStockModificationAccessWithFetch(
-            reqAdmin,
-            ownerCompanyGodown,
-            this.godownRepository
+        const ownerCompanyGodown = stockDoc.companyGodownId || sourceGodown;
+        const canModifyStock = await validateStockModificationAccessWithFetch(
+          reqAdmin,
+          ownerCompanyGodown,
+          this.godownRepository
+        );
+        if (!canModifyStock) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
+            ERROR_CODES.GODOWN_ACCESS_DENIED
           );
-          if (!canModifyStock) {
-            throw new HttpException(
-              403,
-              ERROR_MESSAGES.STOCK_MODIFICATION_DENIED,
-              ERROR_CODES.GODOWN_ACCESS_DENIED
-            );
+        }
+
+        const hasSourceAccess = compareAdminAndGodownLocation(reqAdmin, sourceGodown);
+        if (!hasSourceAccess) {
+          throw new HttpException(403, ERROR_MESSAGES.GODOWN_ACCESS_DENIED, ERROR_CODES.GODOWN_ACCESS_DENIED);
+        }
+
+        if (!primaryCompanyGodownId && ownerCompanyGodown) {
+          primaryCompanyGodownId = (ownerCompanyGodown._id || ownerCompanyGodown).toString();
+        }
+
+        const actualQty = Number(itemInput.actualQuantity ?? itemInput.quantity ?? 0);
+        if (actualQty <= 0) {
+          throw new HttpException(400, "Actual quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const billedQty = Number(itemInput.billedQuantity ?? actualQty);
+        if (billedQty <= 0) {
+          throw new HttpException(400, "Billed quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const sId = itemInput.godownStockId;
+        const prevStockDeducted = previousDeductions.get(sId)?.actualQty || 0;
+        const totalNewStockForBatch = newDeductions.get(sId)?.actualQty || 0;
+        const availableStockReverted = Number(stockDoc.currentStock) + prevStockDeducted;
+
+        const dcNo = (itemInput.dcNo || stockDoc.dcNo || stockDoc.batchNo || "").trim();
+        const lotNo = (itemInput.lotNo || stockDoc.lotNo || "").trim();
+
+        if (availableStockReverted < totalNewStockForBatch) {
+          throw new HttpException(
+            400,
+            `Insufficient stock for batch '${lotNo || dcNo || "N/A"}'. Available: ${availableStockReverted}, Total Requested: ${totalNewStockForBatch}`,
+            ERROR_CODES.INSUFFICIENT_STOCK
+          );
+        }
+
+        const prevUomDeducted = previousDeductions.get(sId)?.uomQty || 0;
+        const totalNewUomForBatch = newDeductions.get(sId)?.uomQty || 0;
+        const availableUomStockReverted = Number(stockDoc.uomQuantity || 0) + prevUomDeducted;
+
+        let uomQty = 1;
+        if (itemInput.uomQuantity !== undefined) {
+          const reqUomQty = Number(itemInput.uomQuantity);
+          if (reqUomQty <= 0) {
+            throw new HttpException(400, "UOM quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
           }
-
-          const hasSourceAccess = compareAdminAndGodownLocation(reqAdmin, sourceGodown);
-          if (!hasSourceAccess) {
-            throw new HttpException(403, ERROR_MESSAGES.GODOWN_ACCESS_DENIED, ERROR_CODES.GODOWN_ACCESS_DENIED);
-          }
-
-          if (!primaryCompanyGodownId && ownerCompanyGodown) {
-            primaryCompanyGodownId = (ownerCompanyGodown._id || ownerCompanyGodown).toString();
-          }
-
-          const actualQty = Number(itemInput.actualQuantity ?? itemInput.quantity ?? 0);
-          if (actualQty <= 0) {
-            throw new HttpException(400, "Actual quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
-          }
-
-          const billedQty = Number(itemInput.billedQuantity ?? actualQty);
-          if (billedQty <= 0) {
-            throw new HttpException(400, "Billed quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
-          }
-
-          const currentStockNum = Number(stockDoc.currentStock) || 0;
-          const dcNo = (itemInput.dcNo || stockDoc.dcNo || stockDoc.batchNo || "").trim();
-          const lotNo = (itemInput.lotNo || stockDoc.lotNo || "").trim();
-
-          if (currentStockNum < actualQty) {
+          if ((stockDoc.uomQuantity !== undefined || prevUomDeducted > 0) && availableUomStockReverted < totalNewUomForBatch) {
             throw new HttpException(
               400,
-              `Insufficient stock for batch '${lotNo || dcNo || "N/A"}'. Available: ${currentStockNum}, Requested: ${actualQty}`,
+              `Insufficient UOM quantity for batch '${lotNo || dcNo || "N/A"}'. Available: ${availableUomStockReverted}, Total Requested: ${totalNewUomForBatch}`,
               ERROR_CODES.INSUFFICIENT_STOCK
             );
           }
+          uomQty = reqUomQty;
+        } else if (stockDoc.uomQuantity !== undefined && stockDoc.uomQuantity > 0) {
+          uomQty = Number(stockDoc.uomQuantity);
+        }
 
-          let uomQty = 1;
-          if (itemInput.uomQuantity !== undefined) {
-            const reqUomQty = Number(itemInput.uomQuantity);
-            if (reqUomQty <= 0) {
-              throw new HttpException(400, "UOM quantity must be greater than zero", ERROR_CODES.VALIDATION_ERROR);
-            }
-            if (stockDoc.uomQuantity !== undefined && stockDoc.uomQuantity > 0 && reqUomQty > Number(stockDoc.uomQuantity)) {
+        const rawItemId = stockDoc.itemId?._id || stockDoc.itemId;
+        const itemId = rawItemId.toString();
+
+        const rawUom = itemInput.uomId || stockDoc.uomId || stockDoc.itemId?.defaultUomId;
+        const uomId = ((rawUom as any)?._id || rawUom)?.toString();
+
+        const rawPer = itemInput.perId || stockDoc.perId || stockDoc.itemId?.defaultPerId;
+        const perId = ((rawPer as any)?._id || rawPer)?.toString();
+
+        const perUnitDoc = perId ? await this.perUnitRepository.getPerUnitById(perId) : null;
+        const multiplier = perUnitDoc?.multiplier && perUnitDoc.multiplier > 0 ? perUnitDoc.multiplier : 1;
+
+        const rate = Number(itemInput.rate);
+        if (rate < 0) {
+          throw new HttpException(400, "Rate cannot be negative", ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const itemDoc = await this.itemRepository.getItemById(itemId);
+        const itemHsnCode = (itemInput.hsnCode || itemDoc?.hsnCode || (itemDoc?.hsnCodeId as any)?.hsnCode || "").trim();
+
+        const itemAmount = Number(((billedQty * rate) / multiplier).toFixed(2));
+
+        subTotal += itemAmount;
+        totalActualQuantity += actualQty;
+        totalBilledQuantity += billedQty;
+
+        calculatedItems.push({
+          godownStockId: stockDoc._id,
+          itemId: generateObjectId(itemId),
+          godownId: generateObjectId(sourceGodown._id || sourceGodown),
+          companyGodownId: generateObjectId(ownerCompanyGodown._id || ownerCompanyGodown),
+          dcNo,
+          lotNo,
+          hsnCode: itemHsnCode,
+          uomId: uomId ? generateObjectId(uomId) : undefined,
+          uomQuantity: uomQty,
+          actualQuantity: actualQty,
+          billedQuantity: billedQty,
+          quantity: actualQty, // legacy alias
+          rate,
+          perId: perId ? generateObjectId(perId) : undefined,
+          amount: itemAmount,
+        });
+      }
+
+      subTotal = Number(subTotal.toFixed(2));
+
+      const isGstBill = dto.isGstBill !== undefined ? Boolean(dto.isGstBill) : existingSale.isGstBill;
+      let gstPercentage = 0;
+      let gstAmount = 0;
+      let totalAmount = subTotal;
+
+      if (isGstBill) {
+        gstPercentage =
+          typeof dto.gstPercentage === "number" && dto.gstPercentage >= 0
+            ? dto.gstPercentage
+            : existingSale.gstPercentage || FINANCIAL_CONFIG.DEFAULT_GST_PERCENT;
+        gstAmount = Number(((subTotal * gstPercentage) / 100).toFixed(2));
+        totalAmount = Number((subTotal + gstAmount).toFixed(2));
+      }
+
+      const updateData: any = {
+        salesTypeId,
+        partyId,
+        companyGodownId: primaryCompanyGodownId ? generateObjectId(primaryCompanyGodownId) : undefined,
+        items: calculatedItems,
+        subTotal,
+        isGstBill,
+        gstPercentage,
+        gstAmount,
+        totalAmount,
+        totalActualQuantity,
+        totalBilledQuantity,
+        totalQuantity: totalActualQuantity,
+        updatedBy: generateObjectId(reqAdmin.userId),
+      };
+
+      if (dto.date) {
+        updateData.date = parseVoucherDate(dto.date);
+      }
+      if (dto.invoiceNo !== undefined) {
+        updateData.invoiceNo = dto.invoiceNo.trim();
+      }
+      if (dto.dcNo !== undefined) {
+        updateData.dcNo = dto.dcNo.trim();
+      }
+      if (dto.notes !== undefined) {
+        updateData.notes = dto.notes.trim();
+      }
+      if (dto.narration !== undefined) {
+        updateData.narration = dto.narration.trim();
+      }
+
+      // Execute stock reconciliation and sale update atomically inside a transaction
+      await withTransaction(async (session: ClientSession) => {
+        // Apply net delta per batch
+        const allStockIds = new Set([...previousDeductions.keys(), ...newDeductions.keys()]);
+        for (const sId of allStockIds) {
+          const prev = previousDeductions.get(sId) || { actualQty: 0, uomQty: 0, itemId: "" };
+          const next = newDeductions.get(sId) || { actualQty: 0, uomQty: 0 };
+
+          const netActualDelta = Number((next.actualQty - prev.actualQty).toFixed(4));
+          const netUomDelta = Number((next.uomQty - prev.uomQty).toFixed(4));
+
+          // actualDeltaForStock: positive increases stock (revert), negative decreases stock (deduct)
+          const actualDeltaForStock = -netActualDelta;
+          // uomDeltaForStock: positive increases uomQuantity (revert), negative decreases uomQuantity (deduct)
+          const uomDeltaForStock = -netUomDelta;
+
+          if (actualDeltaForStock !== 0 || uomDeltaForStock !== 0) {
+            const updated = await this.godownStockRepository.adjustBatchStock(
+              sId,
+              actualDeltaForStock,
+              reqAdmin.userId,
+              session,
+              uomDeltaForStock
+            );
+            if (!updated) {
               throw new HttpException(
                 400,
-                `Insufficient UOM quantity for batch '${lotNo || dcNo || "N/A"}'. Available: ${stockDoc.uomQuantity}, Requested: ${reqUomQty}`,
+                "Could not adjust stock for batch. Stock may have changed or is insufficient.",
                 ERROR_CODES.INSUFFICIENT_STOCK
               );
             }
-            uomQty = reqUomQty;
-          } else if (stockDoc.uomQuantity !== undefined && stockDoc.uomQuantity > 0) {
-            uomQty = Number(stockDoc.uomQuantity);
           }
-
-          const rawItemId = stockDoc.itemId?._id || stockDoc.itemId;
-          const itemId = rawItemId.toString();
-
-          const rawUom = itemInput.uomId || stockDoc.uomId || stockDoc.itemId?.defaultUomId;
-          const uomId = ((rawUom as any)?._id || rawUom)?.toString();
-
-          const rawPer = itemInput.perId || stockDoc.perId || stockDoc.itemId?.defaultPerId;
-          const perId = ((rawPer as any)?._id || rawPer)?.toString();
-
-          const perUnitDoc = perId ? await this.perUnitRepository.getPerUnitById(perId) : null;
-          const multiplier = perUnitDoc?.multiplier && perUnitDoc.multiplier > 0 ? perUnitDoc.multiplier : 1;
-
-          const rate = Number(itemInput.rate);
-          if (rate < 0) {
-            throw new HttpException(400, "Rate cannot be negative", ERROR_CODES.VALIDATION_ERROR);
-          }
-
-          const itemDoc = await this.itemRepository.getItemById(itemId);
-          const itemHsnCode = (itemInput.hsnCode || itemDoc?.hsnCode || (itemDoc?.hsnCodeId as any)?.hsnCode || "").trim();
-
-          const itemAmount = Number(((billedQty * rate) / multiplier).toFixed(2));
-
-          subTotal += itemAmount;
-          totalActualQuantity += actualQty;
-          totalBilledQuantity += billedQty;
-
-          calculatedItems.push({
-            godownStockId: stockDoc._id,
-            itemId: generateObjectId(itemId),
-            godownId: generateObjectId(sourceGodown._id || sourceGodown),
-            companyGodownId: generateObjectId(ownerCompanyGodown._id || ownerCompanyGodown),
-            dcNo,
-            lotNo,
-            hsnCode: itemHsnCode,
-            uomId: uomId ? generateObjectId(uomId) : undefined,
-            uomQuantity: uomQty,
-            actualQuantity: actualQty,
-            billedQuantity: billedQty,
-            quantity: actualQty, // legacy alias
-            rate,
-            perId: perId ? generateObjectId(perId) : undefined,
-            amount: itemAmount,
-          });
         }
 
-        // Step C: Deduct new items stock by actualQuantity
+        // Adjust aggregate item stocks
+        const allItemIds = new Set<string>();
+        for (const p of previousDeductions.values()) {
+          if (p.itemId) allItemIds.add(p.itemId);
+        }
         for (const it of calculatedItems) {
-          const updatedStock = await this.godownStockRepository.decreaseStock(
-            it.godownStockId,
-            it.actualQuantity,
-            reqAdmin.userId,
-            session,
-            it.uomQuantity
-          );
-          if (!updatedStock) {
-            throw new HttpException(
-              400,
-              `Could not deduct stock for batch '${it.lotNo || it.dcNo || "N/A"}'. Stock may have changed.`,
-              ERROR_CODES.INSUFFICIENT_STOCK
-            );
+          allItemIds.add(it.itemId.toString());
+        }
+
+        for (const itemId of allItemIds) {
+          let oldQtyForItem = 0;
+          for (const p of previousDeductions.values()) {
+            if (p.itemId === itemId) oldQtyForItem += p.actualQty;
           }
-
-          await this.itemRepository.adjustStockQuantity(it.itemId.toString(), -it.actualQuantity, session);
-        }
-
-        subTotal = Number(subTotal.toFixed(2));
-
-        const isGstBill = dto.isGstBill !== undefined ? Boolean(dto.isGstBill) : existingSale.isGstBill;
-        let gstPercentage = 0;
-        let gstAmount = 0;
-        let totalAmount = subTotal;
-
-        if (isGstBill) {
-          gstPercentage =
-            typeof dto.gstPercentage === "number" && dto.gstPercentage >= 0
-              ? dto.gstPercentage
-              : existingSale.gstPercentage || FINANCIAL_CONFIG.DEFAULT_GST_PERCENT;
-          gstAmount = Number(((subTotal * gstPercentage) / 100).toFixed(2));
-          totalAmount = Number((subTotal + gstAmount).toFixed(2));
-        }
-
-        const updateData: any = {
-          salesTypeId,
-          partyId,
-          companyGodownId: primaryCompanyGodownId ? generateObjectId(primaryCompanyGodownId) : undefined,
-          items: calculatedItems,
-          subTotal,
-          isGstBill,
-          gstPercentage,
-          gstAmount,
-          totalAmount,
-          totalActualQuantity,
-          totalBilledQuantity,
-          totalQuantity: totalActualQuantity,
-          updatedBy: generateObjectId(reqAdmin.userId),
-        };
-
-        if (dto.date) {
-          updateData.date = parseVoucherDate(dto.date);
-        }
-        if (dto.invoiceNo !== undefined) {
-          updateData.invoiceNo = dto.invoiceNo.trim();
-        }
-        if (dto.dcNo !== undefined) {
-          updateData.dcNo = dto.dcNo.trim();
-        }
-        if (dto.notes !== undefined) {
-          updateData.notes = dto.notes.trim();
-        }
-        if (dto.narration !== undefined) {
-          updateData.narration = dto.narration.trim();
+          let newQtyForItem = 0;
+          for (const it of calculatedItems) {
+            if (it.itemId.toString() === itemId) newQtyForItem += it.actualQuantity;
+          }
+          const itemNetDelta = Number((newQtyForItem - oldQtyForItem).toFixed(4));
+          if (itemNetDelta !== 0) {
+            await this.itemRepository.adjustStockQuantity(itemId, -itemNetDelta, session);
+          }
         }
 
         await this.saleRepository.updateSale(id, updateData, session);

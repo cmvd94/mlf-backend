@@ -97,5 +97,6 @@ export const GetAvailableStockForSaleRouteSchema = z.object({
     godownId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Godown ID").optional(),
     itemId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Item ID").optional(),
     search: z.string().trim().optional(),
+    saleId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid Sale ID").optional(),
   }),
 });

@@ -18,8 +18,6 @@ export interface CreateStockTransferDestinationItemDTO {
   uomId?: string;
   uomQuantity?: number;
   perId?: string;
-  destinationGodownStockId?: string;
-  godownStockId?: string;
 }
 
 export interface CreateStockTransferDTO {

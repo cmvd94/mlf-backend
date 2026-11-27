@@ -61,4 +61,5 @@ export interface GetAvailableStockForSaleQueryDTO {
   godownId?: string;
   itemId?: string;
   search?: string;
+  saleId?: string;
 }
