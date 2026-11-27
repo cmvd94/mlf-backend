@@ -6,6 +6,11 @@ import { AdminRole, SuperAdmin } from "@/shared/constants/adminRole";
 import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
+import HttpException from "@/shared/exceptions/HttpException";
+import {
+  ERROR_CODES,
+  ERROR_MESSAGES,
+} from "@/shared/constants/errorCodesMessages";
 import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 
@@ -22,6 +27,13 @@ export class GetUserListUseCase {
     reqAdmin?: ReqAdminDTO
   ) => {
     try {
+      if (!reqAdmin || reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
       const query: any = {};
       query.isDeleted = false;
       if (dto.role) query.role = dto.role;

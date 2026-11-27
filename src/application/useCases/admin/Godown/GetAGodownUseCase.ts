@@ -8,6 +8,8 @@ import {
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
+import { SuperAdmin } from "@/shared/constants/adminRole";
+import { GodownType } from "@/domain/entities/admin/Godown";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 
@@ -27,6 +29,17 @@ export class GetAGodownUseCase {
           404,
           ERROR_MESSAGES.GODOWN_NOT_FOUND,
           ERROR_CODES.GODOWN_NOT_FOUND
+        );
+      }
+
+      if (
+        godown.type === GodownType.COMPANY_GODOWN &&
+        reqAdmin.role !== SuperAdmin.SUPER_ADMIN
+      ) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
         );
       }
 

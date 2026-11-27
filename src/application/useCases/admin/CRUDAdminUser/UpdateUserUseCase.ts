@@ -6,6 +6,7 @@ import {
   ERROR_CODES,
 } from "@/shared/constants/errorCodesMessages";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
+import { SuperAdmin } from "@/shared/constants/adminRole";
 import { UpdateAdminUserDTO } from "@/shared/dto/admin/crudUserDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import HttpException from "@/shared/exceptions/HttpException";
@@ -35,6 +36,13 @@ export class UpdateUserUseCase {
     reqAdmin: ReqAdminDTO
   ) => {
     try {
+      if (reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
       const userBeforeUpdate = await this.adminRepository.findUserById(userId);
       if (!userBeforeUpdate) {
         throw new HttpException(

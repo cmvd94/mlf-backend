@@ -1,9 +1,14 @@
 import { ReqAdminDTO } from "../dto/admin/reqAdminDTO";
 import { GetGodownListQueryDTO } from "../dto/admin/godownDTO";
 import { AdminRole, SuperAdmin } from "../constants/adminRole";
-import { Godown } from "@/domain/entities/admin/Godown";
+import { Godown, GodownType } from "@/domain/entities/admin/Godown";
 import { generateObjectId } from "./generateObjectId";
 import { Types } from "mongoose";
+import HttpException from "@/shared/exceptions/HttpException";
+import {
+  ERROR_CODES,
+  ERROR_MESSAGES,
+} from "@/shared/constants/errorCodesMessages";
 
 const handleLocationFilters = (
   dto: GetGodownListQueryDTO,
@@ -38,7 +43,18 @@ export const generateGodownQuery = (
   const query: any = { isDeleted: false };
   let hasAccess = handleLocationFilters(dto, reqAdmin);
 
-  if (dto.type) query.type = dto.type;
+  if (reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+    if (dto.type === GodownType.COMPANY_GODOWN) {
+      throw new HttpException(
+        403,
+        ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+        ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+      );
+    }
+    query.type = GodownType.JOBWORK_GODOWN;
+  } else if (dto.type) {
+    query.type = dto.type;
+  }
   if (dto.isActive !== undefined) query.isActive = dto.isActive;
   if (dto.search && dto.search.trim().length > 0) {
     const searchRegex = new RegExp(dto.search.trim(), "i");

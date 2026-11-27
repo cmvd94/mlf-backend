@@ -30,6 +30,13 @@ export class DeleteUserUseCase {
 
   execute = async (params: DeleteAdminDTO, reqAdmin: ReqAdminDTO) => {
     try {
+      if (reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
       const userObjectId = generateObjectId(params.userId);
       const reqAdminObjectId = generateObjectId(reqAdmin.userId);
 

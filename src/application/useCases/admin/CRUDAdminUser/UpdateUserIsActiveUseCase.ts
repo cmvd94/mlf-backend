@@ -2,6 +2,7 @@ import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 import { AdminRepository } from "@/infrastructure/repositories/admin/AdminRepository";
 import { GodownModel } from "@/domain/entities/admin/Godown";
+import { SuperAdmin } from "@/shared/constants/adminRole";
 import { UpdateIsActiveUserDTO } from "@/shared/dto/admin/crudUserDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectIdsList } from "@/shared/utils/generateObjectId";
@@ -25,6 +26,13 @@ export class UpdateUserIsActiveUseCase {
 
   execute = async (body: UpdateIsActiveUserDTO, reqAdmin: ReqAdminDTO) => {
     try {
+      if (reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
       const userIds = generateObjectIdsList(body.userIds);
       const availableUsers = await this.adminRepository.findUsersByIds(userIds);
 

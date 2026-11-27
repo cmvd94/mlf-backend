@@ -12,6 +12,8 @@ import { generateObjectId, generateObjectIdsList } from "@/shared/utils/generate
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
+import { SuperAdmin } from "@/shared/constants/adminRole";
+import { GodownType } from "@/domain/entities/admin/Godown";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession, Types } from "mongoose";
 
@@ -33,6 +35,17 @@ export class DeleteGodownUseCase {
           404,
           ERROR_MESSAGES.GODOWN_NOT_FOUND,
           ERROR_CODES.GODOWN_NOT_FOUND
+        );
+      }
+
+      if (
+        godown.type === GodownType.COMPANY_GODOWN &&
+        reqAdmin.role !== SuperAdmin.SUPER_ADMIN
+      ) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
         );
       }
 

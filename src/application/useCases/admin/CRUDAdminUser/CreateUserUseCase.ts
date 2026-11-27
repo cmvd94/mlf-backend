@@ -16,6 +16,7 @@ import { checkRolePriority } from "@/shared/utils/adminRolePriorityComapre";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { validateAccessScope } from "@/shared/utils/accessScopeValidation";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
+import { SuperAdmin } from "@/shared/constants/adminRole";
 import bcrypt from "bcryptjs";
 
 @injectable()
@@ -28,6 +29,13 @@ export class CreateUserUseCase {
 
   execute = async (payload: CreateAdminUserDTO, reqAdmin: ReqAdminDTO) => {
     try {
+      if (reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
       if (!checkRolePriority(reqAdmin.role, payload.role)) {
         throw new HttpException(
           403,

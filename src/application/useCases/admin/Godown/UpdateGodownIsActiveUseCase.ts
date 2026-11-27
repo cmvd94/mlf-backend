@@ -2,6 +2,8 @@ import { inject, injectable } from "tsyringe";
 import { Logger } from "winston";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { GodownRepository } from "@/infrastructure/repositories/admin/GodownRepository";
+import { SuperAdmin } from "@/shared/constants/adminRole";
+import { GodownType } from "@/domain/entities/admin/Godown";
 import { generateObjectId, generateObjectIdsList } from "@/shared/utils/generateObjectId";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
@@ -35,6 +37,17 @@ export class UpdateGodownIsActiveUseCase {
       }
 
       for (const godown of godowns) {
+        if (
+          godown.type === GodownType.COMPANY_GODOWN &&
+          reqAdmin.role !== SuperAdmin.SUPER_ADMIN
+        ) {
+          throw new HttpException(
+            403,
+            ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+            ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+          );
+        }
+
         if (
           !compareLocationOfReqAdminNewUserWarehouse(
             reqAdmin.role,

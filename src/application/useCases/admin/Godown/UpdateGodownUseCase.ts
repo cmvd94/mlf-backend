@@ -13,7 +13,7 @@ import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { generateObjectId, generateObjectIdsList } from "@/shared/utils/generateObjectId";
 import { ErrorHandler } from "@/shared/utils/ErrorHandler";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
-import { AdminRole } from "@/shared/constants/adminRole";
+import { AdminRole, SuperAdmin } from "@/shared/constants/adminRole";
 import { GodownType } from "@/domain/entities/admin/Godown";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession, Types } from "mongoose";
@@ -36,6 +36,19 @@ export class UpdateGodownUseCase {
           404,
           ERROR_MESSAGES.GODOWN_NOT_FOUND,
           ERROR_CODES.GODOWN_NOT_FOUND
+        );
+      }
+
+      const effectiveType = data.type ?? existing.type;
+      if (
+        (existing.type === GodownType.COMPANY_GODOWN ||
+          effectiveType === GodownType.COMPANY_GODOWN) &&
+        reqAdmin.role !== SuperAdmin.SUPER_ADMIN
+      ) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
         );
       }
 
@@ -78,7 +91,6 @@ export class UpdateGodownUseCase {
       if (data.phoneNumber !== undefined) updatePayload.phoneNumber = data.phoneNumber.trim();
       if (data.isActive !== undefined) updatePayload.isActive = data.isActive;
 
-      const effectiveType = data.type ?? existing.type;
       if (effectiveType === GodownType.JOBWORK_GODOWN) {
         // Jobwork godowns do not require admin user assigning (all four fields)
         const hasManager = Boolean(data.godownManagerId && data.godownManagerId.trim().length > 0);

@@ -4,10 +4,7 @@ import {
 } from "@/application/decorators/adminDefineMetadata";
 import { BasePath } from "@/application/decorators/basePath";
 import { ValidateSchema } from "@/application/decorators/validateSchemaDefineMetadata";
-import {
-  ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR,
-  ROLE_GUARD_ALL,
-} from "@/shared/constants/adminRoleGuardType";
+import { ROLE_GUARD_ONLY_SUPERADMIN } from "@/shared/constants/adminRoleGuardType";
 import { injectable, inject } from "tsyringe";
 import { NextFunction, Request, Response } from "express";
 import { Logger } from "winston";
@@ -67,7 +64,7 @@ export class CRUDAdminUserController {
   @Post("/create-admin")
   @ValidateSchema(CreateAdminUserRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async createAdminUser(
     @Body() body: CreateAdminUserDTO,
     @ReqAdmin() reqAdmin: ReqAdminDTO,
@@ -96,7 +93,7 @@ export class CRUDAdminUserController {
   @Patch("/update-admin/:userId")
   @ValidateSchema(UpdateAdminUserRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async updateAdminUser(
     @Params() params: UpdateAdminUserParamsDTO,
     @Body() body: UpdateAdminUserDTO,
@@ -130,7 +127,7 @@ export class CRUDAdminUserController {
   @Get("/get-user-list")
   @ValidateSchema(GetAdminUserListRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_ALL)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async getAdminUserList(
     @Query() query: GetAdminUsersFilterDTO,
     @ReqAdmin() reqAdmin: ReqAdminDTO,
@@ -164,7 +161,7 @@ export class CRUDAdminUserController {
   @Get("/get-a-user/:userId")
   @ValidateSchema(GetAAdminRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_ALL)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async getAUser(
     @Params() params: GetAAdminDTO,
     @ReqAdmin() reqAdmin: ReqAdminDTO,
@@ -193,7 +190,7 @@ export class CRUDAdminUserController {
   @Delete("/delete-admin/:userId")
   @ValidateSchema(DeleteAdminRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async deleteAdminUser(
     @Params() params: DeleteAdminDTO,
     @ReqAdmin() reqAdmin: ReqAdminDTO,
@@ -221,7 +218,7 @@ export class CRUDAdminUserController {
   @Patch("/update-is-active-user")
   @ValidateSchema(updateIsActiveRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_TILL_WAREHOUSE_SUPERVISOR)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async updateIsActiveUser(
     @Body() body: UpdateIsActiveUserDTO,
     @ReqAdmin() reqAdmin: ReqAdminDTO,

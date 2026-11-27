@@ -19,6 +19,13 @@ export class GetAUserUseCase {
 
   execute = async (userId: string, reqAdmin?: ReqAdminDTO) => {
     try {
+      if (!reqAdmin || reqAdmin.role !== SuperAdmin.SUPER_ADMIN) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
       const user = await this.adminRepository.findUserById(userId);
 
       if (!user) {

@@ -19,6 +19,7 @@ import {
 import {
   ROLE_GUARD_ALL,
   ROLE_GUARD_TILL_MID_LEVEL_ADMIN,
+  ROLE_GUARD_ONLY_SUPERADMIN,
 } from "@/shared/constants/adminRoleGuardType";
 import { AdminErrorStage } from "@/shared/constants/errorStage";
 import { sendErrorResponse } from "@/shared/utils/sendErrorResponse";
@@ -285,7 +286,7 @@ export class GodownController {
   @Get("/eligible-admins")
   @ValidateSchema(GetEligibleGodownAdminsRouteSchema)
   @IsAdminAuthenticated()
-  @AdminRoleGuard(ROLE_GUARD_ALL)
+  @AdminRoleGuard(ROLE_GUARD_ONLY_SUPERADMIN)
   public async getEligibleAdmins(
     @Query() query: GetEligibleGodownAdminsQueryDTO,
     @ReqAdmin() reqAdmin: ReqAdminDTO,

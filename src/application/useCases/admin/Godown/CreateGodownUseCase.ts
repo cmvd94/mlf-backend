@@ -15,7 +15,7 @@ import { CreateGodownDTO } from "@/shared/dto/admin/godownDTO";
 import { ReqAdminDTO } from "@/shared/dto/admin/reqAdminDTO";
 import { isValidAccessScope } from "@/shared/utils/accessScopeValidation";
 import { compareLocationOfReqAdminNewUserWarehouse } from "@/shared/utils/validateLocationAdminNewUser";
-import { AdminRole } from "@/shared/constants/adminRole";
+import { AdminRole, SuperAdmin } from "@/shared/constants/adminRole";
 import { GodownType } from "@/domain/entities/admin/Godown";
 import { withTransaction } from "@/shared/utils/withTransaction";
 import { ClientSession, Types } from "mongoose";
@@ -34,6 +34,17 @@ export class CreateGodownUseCase {
 
   async execute(data: CreateGodownDTO, reqAdmin: ReqAdminDTO) {
     try {
+      if (
+        data.type === GodownType.COMPANY_GODOWN &&
+        reqAdmin.role !== SuperAdmin.SUPER_ADMIN
+      ) {
+        throw new HttpException(
+          403,
+          ERROR_MESSAGES.UNAUTHORIZED_ADMIN_ROLE,
+          ERROR_CODES.UNAUTHORIZED_ADMIN_ROLE
+        );
+      }
+
       // 1. Validate Godown location hierarchy
       if (
         !data.country ||
